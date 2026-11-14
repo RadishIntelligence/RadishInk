@@ -645,11 +645,8 @@ function main() {
     if (!existsSync(resolve(root, path))) errors.push(`缺少 ${path}`);
   if (errors.length) throw new Error(errors.join("\n"));
   errors.push(...governanceErrors(loadGovernance()));
-  if (
-    read("AGENTS.md").split("\n").slice(1).join("\n") !==
-    read("CLAUDE.md").split("\n").slice(1).join("\n")
-  )
-    errors.push("AGENTS / CLAUDE 正文未同步");
+  if (!readFileSync(resolve(root, "AGENTS.md")).equals(readFileSync(resolve(root, "CLAUDE.md"))))
+    errors.push("AGENTS.md 与 CLAUDE.md 必须逐字节一致");
   errors.push(
     ...licenseErrors({
       project: read("LICENSE"),
