@@ -45,3 +45,15 @@
 | `release-lock-arm64.json` |  384 | `f1a53fbb8c36f7ac639a8738b4c9fcc6e37d4d824a04f6e850f193c64150df73` |
 
 两个 lock 与成对记录派生值相同。匿名读取 GHCR 确认 Web 完整 tag 与 `test-latest` 均指向 `sha256:44d3f3b219397fa6f1b22525eb821dffcc8f9c40d2afb58d0a1af0dbd446190d`，Server 两个标签均指向 `sha256:73a90b2767010f39f8d8c38dbfb8c99875b411e6055fb5d3e2b1458f516a886f`。两份 index、四份平台 manifest 和 config 的内容摘要、平台、OCI 版本与源码 revision 均与记录一致。
+
+## 本机 HTTPS 配置验收
+
+用 `v26.11.1.1601-test` 的 arm64 lock 在本机 OrbStack 上运行 `RADISHINK_ENV=production`。临时反代在 `https://127.0.0.1:4298/nested/` 终止 TLS，Web 只绑定本机端口，Server 未映射宿主端口。`openssl s_client` 以临时证书校验 IP 并确认 TLS 1.3，维护命令及 Playwright API 请求通过各自进程的 `NODE_EXTRA_CA_CERTS` 验证该证书，独立 Chromium 153.0.8010.12 临时固定证书公钥。空卷初始化、`deploy:release preflight` 和 `apply --no-pull` 通过，两服务均 `healthy`，同源 HTTPS 返回 `ready`。
+
+Web 通过 `docker pull` 获取 `sha256:0121c85da0404ca1ec36106e2694aec49cbb67f5318383b96157021fd9c9291c`。Server 的常规拉取在约 207 MiB 层停滞，随后从同一 GHCR 来源分段获取，按 manifest 逐项校验大小及 SHA-256 后从 OCI 归档载入 `sha256:bf19869b77b910205a3e795b7a88bbc78ea0a248d6a83be8dedde95f1bb371a4`。预检按原始 lock 核对两份镜像。
+
+- Chromium 确认为安全上下文，会话 Cookie 使用 `__Host-` 前缀并带 `Secure`、`HttpOnly` 和 `SameSite=Lax`。新建、插图、保存和刷新重开通过，ZIP 的正文、相对图片引用和原图字节均正确。
+- `/nested/` 的 Service Worker 已注册，未观察到私有 API 进入 Cache Storage。浏览器观察到的 22 次 API 响应均为 `no-store`。异源 Origin 返回 403，未知 API 返回不缓存的 404 JSON。
+- 停写备份包含 14 个文件、130017 字节。`storage-cli restore` 把一篇稿件恢复到独立空卷，`check` 无未知路径，切换到恢复卷后再次通过预检与 HTTPS `ready`。部署 ID、账号归属、正文和原图保留，epoch 轮换。旧会话写入返回 401，旧 CSRF 搭配新会话返回 403，重新登录后合法写入使 revision 从 3 推进到 4。
+
+本轮覆盖已发布镜像的本机原生 arm64 和生产配置下的 HTTPS 链路。外部域名、公开信任证书和实际 amd64 测试主机仍待对应环境验收。 [当前状态](../status/current.md#接下来的事项)
