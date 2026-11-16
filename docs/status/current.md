@@ -1,6 +1,8 @@
 # 当前状态
 
-2026-11-16 更新。`v26.11.1.0902-test` 已通过本机隔离 arm64 Compose 验收，覆盖空卷部署、浏览器写作与 ZIP 导出、独立卷恢复及旧会话拒写。[部署验收记录](../records/2026-11-16-p4-release-acceptance.md)
+2026-11-16 更新。`v26.11.1.1601-test` 指向 `46e3581`，GitHub Actions 在首次运行自动创建 Pre-release。两个架构的原生 CI 均通过，三个附件均可匿名下载且 SHA-256 一致，两个完整镜像标签与 `test-latest` 已回读核对。 [发布记录](../records/2026-11-16-p4-release-acceptance.md#候选自动发布) · [Pre-release](https://github.com/laugh0608/RadishInk/releases/tag/v26.11.1.1601-test)
+
+`v26.11.1.0902-test` 已通过本机隔离 arm64 Compose 验收，覆盖空卷部署、浏览器写作与 ZIP 导出、独立卷恢复及旧会话拒写。[部署验收记录](../records/2026-11-16-p4-release-acceptance.md)
 
 首个双镜像测试版于 11 月 10 日发布，tag 指向 `80edec7`。amd64 和 arm64 原生 CI 均通过，两份镜像的完整标签、平台摘要和三个 Release 附件均已匿名核对。[Pre-release](https://github.com/laugh0608/RadishInk/releases/tag/v26.11.1.0902-test) · [Actions](https://github.com/laugh0608/RadishInk/actions/runs/42647722683) · [首发记录](../records/2026-11-09-day-review.md#首发结果)
 
@@ -38,15 +40,14 @@ P1 / P2 与 PWA 已进入开发预发布。P3 / P4 源码已通过 PR #5 集成�
 
 P4-1 至 P4-3 交付范围与证据见[专题地图](../planning/topics.md#子专题归属与验收入口)；下一轮按以下顺序推进，详细职责和验收条件统一见 [P4 开发顺序](../planning/self-hosted-storage.md#下一轮开发顺序)：
 
-1. **在下一版候选中验证 CI 首次创建 Release。** 已用首发镜像在干净检出复验发布记录与两个 lock 的生成。下一次候选发布时确认 CI 能直接创建 Release 并附上三个文件，第三方来源和许可按实际镜像维护。[本地复验](../records/2026-11-16-p4-release-acceptance.md#发布记录生成复验) · [发布流程](../deployment/release-materials.md#主仓库发布流程) · [分发说明](../deployment/image-distribution.md)
-2. **按可用环境补部署验收。** 在获准的 amd64 测试主机或具备生产 HTTPS 入口的测试环境，按目标架构 lock 补对应链路。若常规拉取受阻，记录受影响组件、失败阶段及固定摘要的获取方式。[固定版本部署](../deployment/release-compose.md) · [部署验收](../deployment/acceptance.md)
-3. **修正已发现的远程治理偏差。** 已只读发现远端 `allow_squash_merge=true` 与仓库禁用 Squash 的规范不一致，应在获准修改远程设置后关闭并核验；PR #5 使用 merge commit，本次未修改设置。
-4. **真实 Radish 联调按用户要求延期。** 未来实际 issuer、独立客户端、HTTPS 回调和测试身份具备对应授权后，与部署环境一起验证准入、绑定、禁用、本站退出和密钥轮换。配置未就绪时继续不依赖它的 P4 本地工作，不把合成发行方通过当作真实联通。物理断电与跨物理设备仍未验证。
-5. **P1 / P2 真实使用环境验收继续延后。** 用户有时间或开发稳定后，再补手机真机的存储、图片、ZIP 下载回导，以及[公众号验收](../deployment/wechat-acceptance.md)的粘贴、保存重开、手机明暗、行高、公式和解包后手工插图。桌面证据不替代这些结果，本地图片自动转存仍不承诺。
+1. **按可用环境补部署验收。** 在获准的 amd64 测试主机或具备生产 HTTPS 入口的测试环境，按目标架构 lock 补对应链路。若常规拉取受阻，记录受影响组件、失败阶段及固定摘要的获取方式。[固定版本部署](../deployment/release-compose.md) · [部署验收](../deployment/acceptance.md)
+2. **修正已发现的远程治理偏差。** 已只读发现远端 `allow_squash_merge=true` 与仓库禁用 Squash 的规范不一致，应在获准修改远程设置后关闭并核验；PR #5 使用 merge commit，本次未修改设置。
+3. **真实 Radish 联调按用户要求延期。** 未来实际 issuer、独立客户端、HTTPS 回调和测试身份具备对应授权后，与部署环境一起验证准入、绑定、禁用、本站退出和密钥轮换。配置未就绪时继续不依赖它的 P4 本地工作，不把合成发行方通过当作真实联通。物理断电与跨物理设备仍未验证。
+4. **P1 / P2 真实使用环境验收继续延后。** 用户有时间或开发稳定后，再补手机真机的存储、图片、ZIP 下载回导，以及[公众号验收](../deployment/wechat-acceptance.md)的粘贴、保存重开、手机明暗、行高、公式和解包后手工插图。桌面证据不替代这些结果，本地图片自动转存仍不承诺。
 
 ## 当前产品与停止线
 
-- P3 / P4 已通过 PR #5 合入 `main` 并回流 `dev`。首发修复 `020cd73` 已推送到 `origin/dev`，用于后续候选的干净检出。已发布镜像仍对应 `80edec7`。此前未完成发布的候选 tag 保留其原始提交。[首发记录](../records/2026-11-09-day-review.md#首发结果)
+- P3 / P4 已通过 PR #5 合入 `main` 并回流 `dev`。首发修复 `020cd73` 已由 `v26.11.1.1601-test` 的首次自动发布验证。首发 `v26.11.1.0902-test` 对应 `80edec7`，历史候选 tag 保留各自的源提交。 [首发记录](../records/2026-11-09-day-review.md#首发结果)
 - 既有 Vercel 集成此前报告自动预览成功，合并后的自动部署与公网页面待另行验收。镜像发布、服务端部署和跨仓库 OIDC 配置需要对应授权。
 - 不迁移真实用户数据；旧文、配置、未知 frontmatter 和目录原件保留，不为升级清库、降级或静默覆盖。
 - 升级前 JSON 不含后续资源，纯 Markdown 也不含图片；浏览器逻辑包不自动写回源文件旁边，目录应备份完整文章包。

@@ -28,4 +28,20 @@
 
 在临时目录分别干净检出 `dev` 的 `668ed3c` 与首发 tag 所指的 `80edec7`。用 `dev` 上的发布脚本复验首发 tag、源码 revision 和 `version.json`，并确认在 `dev` 检出中以同一旧 tag 生成记录会因 revision 不符被拒绝。通过 GHCR 重新核对两个 index、四份平台 manifest 与 config，按固定摘要运行只读基础清单采集，四份结果与首发源码的锁定计划一致。amd64 清单在本机仿真运行。Server amd64 的常规拉取停滞后，从同一 GHCR 来源分段下载，核对 manifest、config 和各层的大小及 SHA-256 后载入。两个已发布的完整镜像 tag 均返回 `reuse`。
 
-首发检出原先没有 `output/`。修复后的 `writeReleaseRecords` 自动创建父目录，生成 `release-pair.json` 和两个架构的 lock，三个文件与 Pre-release 附件逐字节一致。尝试写入已存在的输出目录时被拒绝，两份 Git 检出保持干净。`dev` 干净检出中使用项目锁定工具链执行 `pnpm test:governance`，139 项通过。下一版候选仍须在实际发布时验证 GitHub Actions 首次创建 Release。 [发布流程](../deployment/release-materials.md#主仓库发布流程)
+首发检出原先没有 `output/`。修复后的 `writeReleaseRecords` 自动创建父目录，生成 `release-pair.json` 和两个架构的 lock，三个文件与 Pre-release 附件逐字节一致。尝试写入已存在的输出目录时被拒绝，两份 Git 检出保持干净。`dev` 干净检出中使用项目锁定工具链执行 `pnpm test:governance`，139 项通过。 [发布流程](../deployment/release-materials.md#主仓库发布流程)
+
+## 候选自动发布
+
+2026-11-16 将 `dev` 快进推送至 `46e3581bf246b71469704c60f0d502acd15bfbaf`，新建并推送指向该提交的注解 tag `v26.11.1.1601-test`。推送前确认远端无对应 tag 和 Release，GitHub 按现有管理员例外允许创建。`check:release-tag`、`validate:web` 和 `validate:server` 均通过，合计治理 139、core 64、Web 802、Server 116 项测试。Web Lint 报告 12 项警告，Vite 报告 chunk 大小和 Baseline 数据时效警告。
+
+[Actions 43866818614](https://github.com/laugh0608/RadishInk/actions/runs/43866818614) 首次运行通过 `Repo Hygiene`、`Web Quality`、两个 Linux 架构的 `Server Quality`、`Candidate Quality` 和 `publish`。创建 Release 的步骤成功，恢复既有记录的重试步骤跳过。`github-actions[bot]` 于北京时间 20:40:39 创建 [Pre-release](https://github.com/laugh0608/RadishInk/releases/tag/v26.11.1.1601-test)，发布 job 于 20:41:15 成功结束。 [发布 job](https://github.com/laugh0608/RadishInk/actions/runs/43866818614/job/133300003938)
+
+通过公开链接匿名下载三个附件。下载字节数与 Release API 一致，独立计算的 SHA-256 如下。
+
+| 附件                      | 字节 | SHA-256                                                            |
+| ------------------------- | ---: | ------------------------------------------------------------------ |
+| `release-pair.json`       | 1476 | `22c9f799e0a660b7b50e23ec797e2f1d18044c58d40634700b6818098854c451` |
+| `release-lock-amd64.json` |  384 | `482c4794924d626ed2a03194028e4fc4ed8985637096c2b4fd307d37bf706b38` |
+| `release-lock-arm64.json` |  384 | `f1a53fbb8c36f7ac639a8738b4c9fcc6e37d4d824a04f6e850f193c64150df73` |
+
+两个 lock 与成对记录派生值相同。匿名读取 GHCR 确认 Web 完整 tag 与 `test-latest` 均指向 `sha256:44d3f3b219397fa6f1b22525eb821dffcc8f9c40d2afb58d0a1af0dbd446190d`，Server 两个标签均指向 `sha256:73a90b2767010f39f8d8c38dbfb8c99875b411e6055fb5d3e2b1458f516a886f`。两份 index、四份平台 manifest 和 config 的内容摘要、平台、OCI 版本与源码 revision 均与记录一致。
