@@ -11,19 +11,25 @@
 | 合入 `main` 的阶段 PR | `pnpm validate:web`、`pnpm validate:server`，说明真实浏览器与公众号验收情况               |
 | 部署 / 发布           | 完整基线、浏览器 smoke、真实公众号粘贴、许可与外部请求检查                                |
 
-`pnpm check:release-tag --tag <候选标签>` 只读验证未来 Git / Docker 命名并输出元数据；`test:governance` 同时覆盖格式边界、轨道别名和停用 Docker 模板的实际元数据命令。历史 tag 不纳入新格式检查，详情见 [版本规则](../governance/versioning.md)。
+`pnpm check:release-tag --tag <候选标签>` 只读验证未来 Git / Docker 命名并输出元数据；`test:governance` 同时覆盖格式边界、轨道别名和发布工作流的触发范围、质量依赖和标签冲突检查。历史 tag 不纳入新格式检查，详情见 [版本规则](../governance/versioning.md)。
 
 `validate:web` 顺序运行仓库检查、治理负向测试、Web Lint、core 与 Web 测试及 Web 构建。桌面端 / 服务端未纳入此命令；修改它们时另行检查对应包，不得声称整个 monorepo 已验收。
 
-`validate:server` 运行服务端无自动修复 Lint，再由 `test:server` 构建最新编译产物并运行 Jest；子进程故障与 loopback HTTP 测试实际加载该产物及 worker，临时监听和合成目录在测试结束后清理。CI 的 `Server Quality` 在 Linux x64 / arm64 安装依赖并运行这些检查，`Candidate Quality` 只在仓库、Web、服务端全部成功时通过。代码与本机维护入口见 [服务端持久化](server-storage.md)，账号 / HTTP 用法见 [本地 API](server-http.md)，服务端证据见 [P3-2 记录](../records/2026-10-25-server-local-api.md)，Web 闭环与私有缓存验证见 [P3-3 记录](../records/2026-10-25-server-web-workspace.md)，OIDC 与 schema 3 迁移见 [P3-4 记录](../records/2026-10-25-server-oidc.md)。OIDC 子进程实际运行编译产物、客户端库和合成签名发行方，纳入 `validate:server`；真实发行方另验。P3 / P4 代码候选的原生 Linux 双架构远程矩阵已在 [PR #5](https://github.com/laugh0608/RadishInk/pull/5) 通过，具体候选 / run 见 [P4-4 记录](../records/2026-10-29-deployment-p4-4.md#已推送与远程证据)；后续每个 PR 仍检查最终提交，不沿用历史结果。
+`validate:server` 运行服务端无自动修复 Lint，再由 `test:server` 构建最新编译产物并运行 Jest；子进程故障与 loopback HTTP 测试实际加载该产物及 worker，临时监听和合成目录在测试结束后清理。CI 的 `Server Quality` 在 Linux x64 / arm64 安装依赖并运行这些检查，另构建两种最终镜像并执行 `check:image-distribution`、`check:base-image-plan`；`Candidate Quality` 只在仓库、Web、服务端全部成功时通过。镜像门禁不包含在本地 `validate:server` 内，命令和证据范围见 [镜像分发](../deployment/image-distribution.md)。代码与本机维护入口见 [服务端持久化](server-storage.md)，账号 / HTTP 用法见 [本地 API](server-http.md)，服务端证据见 [P3-2 记录](../records/2026-10-25-server-local-api.md)，Web 闭环与私有缓存验证见 [P3-3 记录](../records/2026-10-25-server-web-workspace.md)，OIDC 与 schema 3 迁移见 [P3-4 记录](../records/2026-10-25-server-oidc.md)。OIDC 子进程实际运行编译产物、客户端库和合成签名发行方，纳入 `validate:server`；真实发行方另验。P3 / P4 代码候选的原生 Linux 双架构远程矩阵已在 [PR #5](https://github.com/laugh0608/RadishInk/pull/5) 通过，具体候选 / run 见 [P4-4 记录](../records/2026-10-29-deployment-p4-4.md#已推送与远程证据)。新增镜像门禁的远程运行见[伴随包与原生 CI 记录](../records/2026-11-09-source-companion-review.md#原生-ci-接续)。
 
 `test:governance` 包含声明生成回归，覆盖双许可独立分发、上游原文保留、分发副本漂移、缺失 / 空白许可文本、来源摘要变更、路径越界和可重复输出；正常 `build:web` 会在构建前重新生成依赖声明。核对真实应用打包范围时另运行 `mise exec -- node scripts/audit-web-bundle.mjs`，说明输出适用的锁文件和构建状态。
+
+镜像生成回归另覆盖物理可选 / 嵌套依赖、源码损坏 / 缺失、原生版本或 Rust 锁定包不齐、下载校验失败清理、缓存损坏拒绝、最终二进制摘要漂移与缺件 / 多余文件。`prepare:image-sources` 和 `check:source-notices` 获取并核验真实源码归档；`check:image-distribution --server <镜像> --web <镜像>` 验证最终文件，不以单元夹具替代实际镜像证据。详细限制见 [分发说明](../deployment/image-distribution.md)。
+
+发布材料的单元回归纳入 `test:governance`，覆盖基础源码缺件、Debian / Alpine 校验闭包、归档损坏 / 越界、双组件 / 双架构与 OCI 身份、真实 loopback Registry V2 读取、部分发布重试及完整 tag 冲突。`check:base-image-plan` 比较实际镜像与四份复核清单；候选 Registry 与镜像标签检查使用[发布材料工具](../deployment/release-materials.md)。全量源码归档校验作为独立的本地复核工具。
+
+固定版本编排的单元负向用例纳入 `test:governance`。真实命名卷、只读预检、备份 / 独立恢复、升级 / 取消与 readiness 故障另运行 `test:deployment --server <最终镜像> --web <最终镜像>`。该命令需要能提供平台 manifest `Descriptor` 的 Docker 镜像存储，使用临时本机端口 4294 和独有合成卷，两个架构须串行在本机执行。CI 在临时 runner 上启用并核验 containerd 镜像存储，再构建镜像并执行材料与编排检查。[编排说明](../deployment/release-compose.md) · [Docker 镜像存储](https://docs.docker.com/engine/storage/containerd/)
 
 `test:governance` 还覆盖 Vercel 部署过滤与内容去重：真实 Git 合并回流、实际变更、上次成功部署基线、首次部署、缺失历史及 Git 错误。跳过构建的退出码约定与手动重建方式见 [部署规则](../deployment/vercel.md#自动部署与重复构建)。
 
 ## 仓库检查的范围
 
-`check:repo` 总是检查必需文件、文档相对链接、工具版本约束、配置解析、发布暂停状态及 CI / Ruleset 契约。文本卫生默认覆盖本地已改动和未跟踪文件；CI 提供 `--base-ref <SHA> --head-ref <SHA>` 后覆盖 PR 文件与提交范围。
+`check:repo` 总是检查必需文件、文档相对链接、工具版本约束、配置解析及 CI、发布工作流与 Ruleset 契约。文本卫生默认覆盖本地已改动和未跟踪文件。CI 提供 `--base-ref <SHA> --head-ref <SHA>` 后覆盖 PR 文件与提交范围。
 
 导入的 WeMD 基线及真实 merge commit 不要求重写标题。后续上游同步需要显式 `--upstream-ref <SHA>` 并经维护者核实来源；常规 PR 不自动接受来源豁免。该检查不是秘密扫描器、许可证审计或完整 GitHub 执行器。
 

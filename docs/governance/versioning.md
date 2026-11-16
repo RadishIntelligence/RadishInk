@@ -22,17 +22,17 @@ vYY.M.RELEASE.DDXX-(dev|test|release)
 
 可选的 `DDXX` 用于区分候选构建或热更新，`DD=01-31`，`XX=01-99`，均为两位；同一天的区分序号递增。它只扩展 Git / Docker 标识，产品版本仍为三段式。与 Radish 一致，命名检查验证字段范围，不据此推断真实构建日期或发布时间。完整标签长度不超过 Docker 的 128 字符上限。
 
-| 轨道      | 用途     | 示例（非已发布版本） |
-| --------- | -------- | -------------------- |
-| `dev`     | 开发验证 | `v26.10.1-dev`       |
-| `test`    | 测试候选 | `v26.10.1.0501-test` |
-| `release` | 正式发布 | `v26.10.1-release`   |
+| 轨道      | 用途     | 语法示例（非当前候选） |
+| --------- | -------- | ---------------------- |
+| `dev`     | 开发验证 | `v26.10.1-dev`         |
+| `test`    | 测试候选 | `v26.10.1.0501-test`   |
+| `release` | 正式发布 | `v26.10.1-release`     |
 
 不再新增上游式 `v1.4.7`、无轨道 `v26.10.1`、补零月份 `v26.01.1-test` 或 `beta` / `rc` 等其他轨道。测试晋级正式版时创建新的 `-release` tag，不移动测试 tag 或把原 Pre-release 改写为正式 Release。
 
 ## Docker 镜像标识
 
-未来 Web 镜像仓库为 `ghcr.io/laugh0608/radishink-web`。完整版本标签必须与 Git tag 逐字相同，保留 `v`、可选扩展与轨道后缀；OCI 标签 `org.opencontainers.image.version` 也写同一完整 tag。
+Web / server 镜像仓库分别为 `ghcr.io/laugh0608/radishink-web`、`ghcr.io/laugh0608/radishink-server`，尚未表示已上传。两者使用同一源码 revision 与完整版本；完整版本标签必须与 Git tag 逐字相同，保留 `v`、可选扩展与轨道后缀；OCI 标签 `org.opencontainers.image.version` 也写同一完整 tag，另记录实际 source 与完整 revision。
 
 | Git tag 轨道 | 固定镜像标签         | 成功发布后更新的浮动别名   |
 | ------------ | -------------------- | -------------------------- |
@@ -42,9 +42,9 @@ vYY.M.RELEASE.DDXX-(dev|test|release)
 
 例如正式镜像为 `ghcr.io/laugh0608/radishink-web:v26.10.1-release`。只有正式轨道可更新 `latest`，不从普通分支 push 生成 `main`、分支名或 `sha-*` 发布版本，也不把本地 `:local` 构建当成发布产物。SHA 可用作追溯元数据，不能替代完整版本标签。
 
-固定版本标签发布后不得指向其他内容；重试须确认现有产物一致。生产部署固定完整 tag 或 digest，浮动别名只用于发现版本，不用作可复现部署依据。
+固定版本标签发布后不得指向其他内容；重试须确认现有产物一致。受控 Compose 同时固定完整 tag 与对应平台 manifest digest，浮动别名只用于发现版本，不用作可复现部署依据。
 
-## 本地检查与停用模板
+## 本地检查与发布工作流
 
 创建未来 tag 前，在目标提交上运行只读命名检查：
 
@@ -54,23 +54,25 @@ mise exec -- pnpm check:release-tag --tag v26.10.1.0501-test
 
 该命令只输出解析结果、镜像标签与 OCI 版本字段，不创建 tag、不访问网络、不构建或推送镜像。无 tag、旧格式或非法字段退出非零。它不遍历或否定历史 tag，也不宣称已经验证版本序号、日期与实际发布记录一致。
 
-实现为 [release-metadata.mjs](../../scripts/release-metadata.mjs)，测试通过 `pnpm test:governance` 接入现有 Repo Hygiene。停用目录内的 [Docker 模板](../../.github/workflows-disabled/docker-image.yml) 在登录 GHCR 前调用同一脚本，使用它生成的标签与 OCI 字段，不再保留上游分支 / SHA 标签生成逻辑。
+实现为 [release-metadata.mjs](../../scripts/release-metadata.mjs)，测试通过 `pnpm test:governance` 接入现有 Repo Hygiene。`--component web|server` 选择组件，`--revision <完整 SHA>` 绑定来源；发布模板还提供 `--source-version version.json`，产品版本或轨道不符时不能输出发布元数据。[主仓库发布工作流](../../.github/workflows/publish.yml)复用同一脚本核对版本并生成 OCI 字段。`test`、`release` tag 触发双架构候选 CI 与成对镜像发布，细节见[发布流程](../deployment/release-materials.md#主仓库发布流程)。
 
-[docker-compose.yml](../../docker-compose.yml) 在 P4-1 改为从本仓库构建 `web` + `server`，不再引用尚未发布的应用镜像或要求 `RADISHINK_IMAGE_TAG`；本地构建项目镜像名不代表发布版本。启动与端口配置见 [Compose 说明](../deployment/compose.md)。未来提供拉取发布镜像的配置时，仍必须使用已实际发布且通过本规则校验的完整版本标签，不默认拉取上游或 `latest`。Docker 发布模板与其命名门禁保持停用，不能以本地构建成功代替发布授权。
+[docker-compose.yml](../../docker-compose.yml) 从本仓库构建 `web` + `server`，本地项目镜像名不代表发布版本，入口见 [Compose 说明](../deployment/compose.md)。独立的[固定版本 Compose](../deployment/release-compose.md)必须使用已实际发布的完整 tag 与对应平台 digest，并核对双镜像 OCI 来源 / revision；不默认拉取上游或 `latest`。本地合成元数据标签不是发布版本，生产不能使用占位 lock。首次实际发布及部署按对应授权执行。
 
 ## 首次发布前的准备
 
-当前已建立产品版本来源并暂定首个开发版本，尚未分配首个 `release` 轨道版本。源码内继承的 WeMD package 版本不是 RadishInk 发布依据，不批量重写。
+当前已建立产品版本来源并有历史源码开发预发布，尚未分配首个 `release` 轨道版本。源码内继承的 WeMD package 版本不是 RadishInk 发布依据，不批量重写。
 
 实际恢复发布时必须在独立变更中：
 
-1. 根 `version.json` 与 Web 展示已统一；恢复发布前补齐参与发布的包同步规则及 tag 与源码版本、轨道一致性校验，不复制兄弟项目无关的 Flutter、Rust 或后端字段。
-2. 为正式 tag 准备随候选提交保存的发布记录，记录完整 Git tag、产品版本、镜像 tag / digest、实际验证和回滚目标，不预写部署成功。
-3. 完成产品品牌、来源许可、外部请求、质量门禁、镜像构建与发布权限配置；补齐 tag 不可覆盖及发布重试约束。
+1. 根 `version.json` 与 Web 展示已统一；恢复发布前复核参与发布的包同步规则；现有命名脚本和成对记录 CLI 已校验 tag 与源码版本 / 轨道，后者另要求已有 tag 目标、当前 HEAD 和 revision 一致且工作区干净，不复制兄弟项目无关的 Flutter、Rust 或后端字段。
+2. 候选提交保存产品版本、第三方来源与许可、验证结果和回退方案。镜像构建后生成绑定完整 Git tag / revision 的成对 digest 和部署 lock，作为独立交付材料保存。上传结果与部署状态另记，构建产物 digest 随交付材料追溯到原候选提交。
+3. 完成产品品牌、来源许可、外部请求、质量门禁、镜像构建与发布权限配置；本地已有完整 tag 的缺失 / 复用 / 冲突检查，发布任务串行执行并在写入前检查两个完整标签，写入后回读 digest。
 4. 若启用 GitHub Release，`test` 为 Pre-release 且不占用 Latest，`release` 为正式 Latest；`dev` 默认不创建 Release。2026-10-06 用户明确授权 `v26.10.1-dev` 的源码预发布，该次按 Pre-release 发布且不占用 Latest，仅提供 GitHub 源码归档，不恢复客户端或 Docker 工作流，见 [发布记录](../records/2026-10-06-v26.10.1-dev.md)。2026-10-25 用户另行明确授权 `v26.10.2-dev` 同样按源码 Pre-release 发布，手机真机与真实公众号验收延后，见 [该次发布记录](../records/2026-10-25-v26.10.2-dev.md)。这些授权不改变后续 dev 版本的默认规则。Release 只能复用已存在 tag，不隐式创建或移动。
 5. 获得对应发布授权后再调整活动工作流白名单并恢复工作流；创建 tag、推送、发布与部署分别按已授权范围执行。
 
-当前 `.github/workflows/` 仍只允许 CI。Docker 文件是停用中的命名模板，尚未接入上述完整发布前置条件；桌面发布文件仅为上游归档，恢复时也必须接入本规则。不能把模板移回活动目录就宣称发布流程可用。
+Git tag 由独立的创建与保护 Ruleset 管理。镜像标签冲突和串行重试通过主仓库发布流程验收。[发布 tag 规则](../../.github/rulesets/README.md#发布-tag-规则) · [镜像远端写入验收](../deployment/release-materials.md#远端写入验收)
+
+仓库检查允许 CI 和主仓库镜像发布工作流。桌面发布文件保留在停用目录。
 
 ## 历史边界
 

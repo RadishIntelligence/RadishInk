@@ -1,0 +1,103 @@
+# 双镜像发布记录与源码材料
+
+本文接续[镜像分发材料](image-distribution.md)与[固定版本部署](release-compose.md)。[主仓库发布工作流](../../.github/workflows/publish.yml)的本地改动待审阅，实际进度见[当前状态](../status/current.md)。`RELEASE_TAG` 代表与目标提交 `version.json` 一致的新 `test` 或 `release` 轨道 tag。
+
+## 基础系统的源码提供方式
+
+GitHub Release 随 tag 提供仓库源码快照，发布说明链接到同一提交的[镜像来源和许可](image-distribution.md#基础镜像与发布边界)。第三方来源、许可原文和对应版本的源码入口按镜像实际分发范围维护。全量源码归档工具用于按需复核，发布任务只上传双镜像记录和部署 lock。
+
+[基础镜像计划](../../LICENSES/distribution/base-image-plan.json)由四个本地最终镜像生成，包含 Web/server × amd64/arm64 的实际安装清单及附带工具。当前共 128 项去重源码需求：63 个 Debian 源码包、59 个 APK origin/version/commit 身份，以及 Node、npm、Corepack、Yarn 和两类容器启动脚本。它是需求清单，**不是已收齐源码的声明**。
+
+```sh
+mise exec -- node scripts/distribution/base-inventory.mjs \
+  --server-amd64 <本地服务端 amd64 镜像> --server-arm64 <本地服务端 arm64 镜像> \
+  --web-amd64 <本地 Web amd64 镜像> --web-arm64 <本地 Web arm64 镜像> \
+  --output output/distribution/base/base-plan.json
+mise exec -- pnpm check:base-image-plan --server <当前架构服务端镜像> --web <当前架构 Web 镜像>
+```
+
+采集使用无网络、只读、`--pull=never` 的临时容器，无业务端口和数据卷。服务端另核对当前 `dpkg-query` 与镜像内旧清单，读取 Node 实际版本、npm/Corepack/Yarn 的版本与原始 LICENSE 摘要、启动脚本摘要；Web 从实际 APK 库读取 origin、commit 和许可，记录原有启动脚本。只有已知 Nginx 供应商包允许缺少 aports commit。CI 每个原生架构构建后比较本架构的两个最终镜像，变更基础系统或附带工具时必须重新复核计划。
+
+### 收集与复核输入
+
+研究阶段在忽略目录收集，复核后的完整元数据保存为 `LICENSES/distribution/base-provision.json`，随候选提交审阅。原始归档仍放忽略的缓存目录。正式目录的结构为 `formatVersion: 1` 和 `entries` 数组，每项包含以下字段。
+
+| 字段      | 含义                                                                                |
+| --------- | ----------------------------------------------------------------------------------- |
+| `id`      | 与计划 `requirements[].id` 完全相同                                                 |
+| `review`  | 对应版本、完整源码范围、嵌入依赖、许可和配方来源的人工复核结论                      |
+| `rebuild` | 解包、应用补丁、生成输入和重建的具体说明；保留上游构建边界                          |
+| `files`   | 完整文件集；每项提供相对 `file`、永久 HTTPS `url`、`sha256`、正整数 `size`、`roles` |
+| `roles`   | `source`、`recipe`、`notice`，可另含 `patch`、`signature`；同一文件可有多个职责     |
+
+每项必须覆盖 source / recipe / notice。目录必须包含所有需求；不能通过删去计划项、伪造复核或空归档绕过门禁。共享文件只能使用完全相同的描述。下载只接受固定 SHA-256，缓存损坏会失败，保留原件供定位；不执行获取的源码、APKBUILD 或安装脚本。
+
+- **Debian：** 按安装的 source package/version 从 [Debian snapshot](https://snapshot.debian.org/) 获取 `.dsc` 与其 `Checksums-Sha256` 中的全部原始 / Debian 补丁归档，保留签名。工具检查 `.dsc` 的 Source、Version、逐文件大小和 SHA-256，不能拿同名新版替代。`.dsc` 的技术核验不宣称已验证签名信任链。解包与重建使用 Debian 的 `dpkg-source` / 构建配方，见[官方说明](https://wiki.debian.org/BuildingTutorial)。
+- **Alpine** 固定安装库的 aports commit，保留同一提交的 APKBUILD、全部同目录文件、安装 / 配置脚本及补丁，并收集源码归档。工具核验 APKBUILD 的固定 URL 和字面 `sha512sums`，遇到未知表达式或缺件时拒绝。变量或条件引入的构建输入另行复核。复核过程只读取配方与归档。[Alpine 官方文档](https://wiki.alpinelinux.org/wiki/APKBUILD_Reference)
+- **Nginx 供应商** 按安装版本独立复核固定 nginx/pkg-oss 配方、Nginx、njs、QuickJS、ACME 及模块源码。核对供应商源码摘要和安装版权摘要，保留原始锁文件及其全部 crate，供离线恢复 ACME 的 vendor 归档。[供应商复核记录](../records/2026-11-09-nginx-vendor-source-review.md)
+- **Node 与附带工具** 收集镜像对应的 Node 原件、内置依赖和通知，以及 npm、Corepack、Yarn 的源码与锁定构建输入。逐文件核对镜像内原始许可和启动脚本，并按固定 OCI 证明定位 Docker Node 与 Docker Nginx 的配方。[运行时复核记录](../records/2026-11-09-runtime-source-review.md)
+
+`libyuv` 的固定 APKBUILD 对 Gitiles 归档使用解包内容校验。该版本的 Alpine v3.24 distfile 已按上游内容摘要与固定 Git 树复核，工具以包身份、APKBUILD SHA-256、原件名称、下载地址及 SHA-256 限定这份材料。其他版本、下载地址和字节仍适用常规 `sha512sums` 校验。[libyuv 复核证据](../records/2026-11-09-aports-source-review.md#libyuv-归档)
+
+`alpine-base@3.24.3-r0` 和 `alpine-keys@2.6-r0` 采用组合通知。两项均保留固定源码、上游 MIT 声明和署名原件，并附 SPDX v3.27.0 的标准全文。查证范围及上游原件缺少独立通知的结果随复核记录保存。这两项继续参加全量覆盖及摘要检查。[组合通知与本地验收](../records/2026-11-09-source-companion-review.md)
+
+`base-provision.json` 保留已复核的来源、固定版本和原件摘要，可按需核验或生成全量归档。Sharp/libvips 源码的镜像内获取方式见[分发说明](image-distribution.md#镜像内布局)。
+
+### 生成与检查
+
+将复核后的文件缓存放在 Git 忽略的 `output/distribution/base/sources/`；不升级基础镜像或项目依赖。`--fetch` 显式按复核目录下载固定输入，共用原有 HTTPS、代理、并发、超时、摘要及半成品清理逻辑。下载体积取决于完整目录，运行前根据 `files[].size` 汇总并确认本地空间；这些缓存及归档不进入 Git。
+
+```sh
+mise exec -- node --use-env-proxy scripts/distribution/source-bundle.mjs --fetch \
+  --plan LICENSES/distribution/base-image-plan.json \
+  --provision LICENSES/distribution/base-provision.json \
+  --directory output/distribution/base/sources \
+  --native-directory output/distribution/sources \
+  --output "output/distribution/radishink-sources-${RELEASE_TAG}"
+mise exec -- pnpm prepare:source-bundle --check "output/distribution/radishink-sources-${RELEASE_TAG}"
+```
+
+没有 `--fetch` 时完全离线；`--check` 不下载或覆盖。已有完整目录需要重新生成归档时，使用 `--check <目录> --archive <新的归档路径>`。生成器在写入前验证全量覆盖和原生目录，拒绝已有输出目录。包内包含 `base-plan.json`、`base-provision.json`、`base/`、`native/`、`LICENSES/`、来源说明和 `bundle.json`。每个文件记录 SHA-256 与大小，缺件、多件、重复、路径越界或软链接均失败。
+
+生成器另输出同名 `.tar.gz`，采用固定 mtime/UID/GID 的 ustar + gzip，同一输入可重生成同一归档。归档验证流式读取，不解包或执行内容，拒绝非普通文件、重复 / 越界成员、未知成员、截断或摘要漂移。用户应在对应版本的项目源码检出中，用标准 `tar` 解包下载的伴随包，再运行 `--check` 核验；涉及源代码修改和重建的权利继续按第三方原许可保留。不承诺上游二进制逐位复现。
+
+## 成对记录与部署 lock
+
+发布准备须先取得**两个组件的候选 multiarch index digest**，每个 index 包含 amd64、arm64 两个运行清单。工作流按 digest 上传两个候选，等成对记录和标签冲突检查通过后才写完整 tag。候选上传需要对应的发布授权。
+
+```sh
+mise exec -- pnpm prepare:release-pair \
+  --tag "${RELEASE_TAG}" --revision <候选完整 Git SHA> --source-version version.json \
+  --web-index sha256:<Web-index> --server-index sha256:<server-index> \
+  --output "output/distribution/release-${RELEASE_TAG}"
+```
+
+执行前须已有完整 Git tag，且其目标提交、当前 HEAD 和 `--revision` 相同，提交内的版本 / 轨道与 tag 一致；工作区与暂存区必须干净，忽略的材料缓存可以保留。工具只读取 Git，不创建或移动 tag，也不会因 Registry 尚无同名镜像而接受另一提交的旧 Git tag。候选构建及材料复核应来自该干净检出；执行前将四个候选平台 digest 拉入本地缓存，或使用工作流采用的 `--pull` 按平台 digest 获取。工具通过 Registry V2 只读获取 index、平台 manifest 和 config，重新计算响应内容 digest、检查 descriptor 大小 / media type、架构、非 root 用户与 OCI version/source/revision；再以该平台 manifest 绑定的本地最终镜像重采基础清单，与仓库锁定的基础镜像计划比较。现代 Docker containerd 存储核对平台 Descriptor；经典存储核对 config ID 与精确 RepoDigest，均比较 RootFS diff IDs 和平台，不将 `inspect.Id` 一概当作 config digest。GHCR 私有候选可通过 `RADISHINK_GHCR_USER` / `RADISHINK_GHCR_TOKEN` 提供只读凭据，不写入记录、不使用 Docker 全局凭据文件，不把响应正文或凭据写进诊断。config blob 可按 Registry 规范跳转至 GHCR / 指定 GitHub blob 域，最多 5 次且不携带认证头；tag 查询拒绝重定向，不能把跳转解释成缺失。
+
+两个组件的四份平台清单、源码版本和完整 tag 全部通过后，才输出 `release-pair.json`、`release-lock-amd64.json` 与 `release-lock-arm64.json`。前者保存两个 index、四个平台 manifest / config digest 和 Git revision。后两者从同一记录派生，用于[固定版本部署预检](release-compose.md)。缺少组件或架构、不同 revision、基础清单漂移和版本 / 轨道错误均会失败。
+
+记录表示材料身份已核验，不表示远端 tag 已发布、CI 已运行或生产部署成功。实际发布另保留上传结果、双 tag 核验、别名更新、验证记录与回退目标。构建后生成的 digest 记录保存在交付材料中，不为把它塞回候选提交而改写已绑定的 revision 或 tag。
+
+## 完整 tag 不可覆盖检查与重试
+
+```sh
+mise exec -- pnpm prepare:release-pair --check-tags "output/distribution/release-${RELEASE_TAG}/release-pair.json"
+```
+
+该命令在对应的干净源码检出中先核对 Git 身份，再检查两个仓库的完整 tag。只有明确的 Registry V2 `404 + MANIFEST_UNKNOWN` 才判定缺失。已有相同 digest 返回 `reuse` 并跳过写入。不同 digest 拒绝覆盖。401/403、限流、网络故障、tag 查询重定向、普通代理 404、畸形 JSON 或 digest 不符都失败。
+
+任一组件冲突时整组停止；部分发布后重试，也必须重新核验两个组件。同一 tag 的候选内容变化时分配新完整版本标识，不移动旧 tag。两个 tag 都确认为预期 digest 后，才允许按版本规则更新浮动别名并宣布成对发布可用。
+
+## 主仓库发布流程
+
+[发布工作流](../../.github/workflows/publish.yml)参考 Radish 的 tag 触发和候选 CI。`test`、`release` 轨道共用一个串行发布队列。发布任务只在 RadishInk 主仓库运行，沿用 GitHub Actions 的仓库凭据。[Radish 发布工作流](https://github.com/laugh0608/Radish/blob/master/.github/workflows/docker-images.yml)
+
+1. CI 通过后校验 tag 与 `version.json`，构建并按 digest 上传 Web、Server 两个双架构候选。
+2. 重采四份基础清单，生成成对记录和两个部署 lock，上传到同版本 GitHub Release。Release 链接到该版本的第三方来源和许可说明。测试版为 Pre-release，正式 Release 在镜像核验完成后才标记 Latest。
+3. 使用 `--check-tags` 检查两个完整镜像 tag。缺失时按已验证的 digest 写入，相同则复用，有冲突即停止。两份完整标签回读一致后才更新浮动别名。较早的 Release 重跑时跳过同轨道的别名更新。
+
+已存在且附件齐全的 Release 使用原 `release-pair.json` 重试，可补齐部分失败的镜像写入。若上传中断并留下草稿，先审阅草稿和已有附件再重试。首次由 Actions 创建的 GHCR 包默认私有，公开可见性按包设置决定。[GHCR 可见性](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#pushing-container-images)
+
+## 远端写入验收
+
+标签冲突由发布流程在写入前检查，部署使用锁文件固定平台 digest。串行队列约束主仓库发布任务，其他持有 GHCR 写权限的身份仍可能移动标签。首次真实发布验证候选 CI、Release 附件、双镜像 digest 回读及重试行为。

@@ -2,11 +2,7 @@
 
 正式文档放在本目录，代码行为以实现与验证证据共同确认；过期文档不能覆盖真实结果。
 
-P3-1 持久化与维护见 [服务端持久化](development/server-storage.md)，P3-2 账号 / 文章 API 见 [操作说明](development/server-http.md) 与 [验证记录](records/2026-10-25-server-local-api.md)；P3-3 Web 工作区的配置和本地合成验收见 [Web 操作说明](development/server-web.md) 与 [验证记录](records/2026-10-25-server-web-workspace.md)。P3-4 OIDC 的配置、迁移与准入见 [OIDC 操作说明](development/server-oidc.md) 与 [验证记录](records/2026-10-25-server-oidc.md)，真实发行方尚未联调。尚未对外部署。
-
-本轮开发预发布的范围、验证及边界见 [v26.10.2-dev 发布记录](records/2026-10-25-v26.10.2-dev.md)；首个开发版保留在 [v26.10.1-dev 记录](records/2026-10-06-v26.10.1-dev.md)。
-
-2026-10-25 全日提交、文档核对和交接见 [当日回顾](records/2026-10-25-day-review.md)；下一轮主开发建议为 [P4 双服务及运维交付](planning/self-hosted-storage.md#下一轮开发顺序)。
+整体方向与顺序见[工作区演进计划](planning/writing-workspace-roadmap.md)，大专题、子专题及任务 / 验收对应见[能力专题地图](planning/topics.md)。实际阶段、近期工作与未验证项统一见[当前状态](status/current.md)；发布、集成和验证流水按需从下表进入原 records，不在本页重复维护。
 
 | 需要了解的内容                      | 文档                                                                                                             |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
@@ -49,11 +45,14 @@ P3-1 持久化与维护见 [服务端持久化](development/server-storage.md)�
 | 来源、许可和上游更新                | [上游维护](governance/upstream.md)                                                                               |
 | 共享模式、离线归属转换与 epoch      | [共享工作区](deployment/shared-workspace.md)、[P4-3 记录](records/2026-10-29-shared-workspace-p4-3.md)           |
 | P4 双架构、容量、故障与服务器 PWA   | [部署验收](deployment/acceptance.md)、[P4-4 记录](records/2026-10-29-deployment-p4-4.md)                         |
+| 镜像许可、固定源码与构建门禁        | [分发说明](deployment/image-distribution.md)、[本轮记录](records/2026-11-03-image-distribution.md)               |
+| 固定版本 Compose、预检与受控升级    | [操作说明](deployment/release-compose.md)、[实施记录](records/2026-11-03-release-compose.md)                     |
+| 镜像来源、成对 digest 与标签检查    | [发布材料](deployment/release-materials.md)、[本轮记录](records/2026-11-03-release-materials.md)                 |
 | Vercel 配置及上线前检查             | [部署说明](deployment/vercel.md)                                                                                 |
 | 公众号合成样例与人工验收步骤        | [公众号验收](deployment/wechat-acceptance.md)                                                                    |
 | Vercel 本地准备与未验证项           | [验收准备记录](records/2026-10-05-vercel-acceptance-preparation.md)                                              |
 | dev 远程部署与自定义域名检查        | [部署记录](records/2026-10-05-vercel-dev-deployment.md)                                                          |
-| 当日提交回顾、文档核对与收尾        | [2026-10-14 收尾记录](records/2026-10-14-day-review.md)                                                          |
+| 当日提交回顾、文档核对与收尾        | [2026-11-03 收尾记录](records/2026-11-03-day-review.md)                                                          |
 | 首轮治理与部署收尾                  | [2026-10-05 收尾记录](records/2026-10-05-day-review.md)                                                          |
 | GitHub 保护模板的启用步骤           | [Rulesets](../.github/rulesets/README.md)                                                                        |
 | Web 品牌与默认请求整理结果          | [Web 品牌整理记录](records/2026-10-05-web-brand-and-services.md)                                                 |

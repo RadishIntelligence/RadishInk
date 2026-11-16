@@ -4,6 +4,7 @@ import { dirname, extname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { parseDocument } from "yaml";
+import { validatePlan } from "./distribution/source-bundle.mjs";
 
 export const IMPORT_COMMIT = "70835e141aa94c0296c78c0f6adf67f636475f38";
 export const AGGREGATE_GUARD =
@@ -76,27 +77,94 @@ export function textErrors(path, text) {
 export function governanceErrors({
   workflow,
   ruleset,
+  tagCreationRuleset,
+  tagProtectionRuleset,
   settings,
   pkg,
   serverPackage,
   mise,
   vercel,
   activeWorkflows,
+  publication,
+  baseImagePlan,
+  serverDockerfile,
+  webDockerfile,
+  dockerignore,
+  releaseCompose,
 }) {
   const errors = [];
   const expect = (condition, message) => {
     if (!condition) errors.push(message);
   };
   expect(
-    same(activeWorkflows, ["ci.yml"]),
-    "只能启用 ci.yml；发布恢复需要同步治理策略",
+    same(activeWorkflows, ["ci.yml", "publish.yml"]),
+    "活动工作流只允许 CI 与镜像发布",
   );
+  expect(
+    same(publication.on, { push: { tags: ["v*-test", "v*-release"] } }) &&
+      same(publication.permissions, { contents: "read" }) &&
+      same(publication.concurrency, {
+        group: "radishink-publish",
+        queue: "max",
+        "cancel-in-progress": false,
+      }),
+    "发布必须由测试或正式 tag 触发并串行执行",
+  );
+  const publish = publication.jobs?.publish ?? {};
+  expect(
+    same(publication.jobs?.quality, { uses: "./.github/workflows/ci.yml" }) &&
+      publish.needs === "quality" &&
+      publish.if === "github.repository == 'laugh0608/RadishInk'" &&
+      same(publish.permissions, { contents: "write", packages: "write" }),
+    "只允许 RadishInk 发布任务在候选 CI 通过后写入 Release 与 GHCR",
+  );
+  const publishSteps = publish.steps ?? [];
+  expect(
+    !publishSteps.some((step) =>
+      /source-bundle\.mjs|radishink-sources-/.test(step.run ?? ""),
+    ),
+    "发布流程不重新生成或上传完整源码伴随包",
+  );
+  const builds = publishSteps.filter((step) =>
+    step.uses?.startsWith("docker/build-push-action@"),
+  );
+  expect(
+    builds.length === 2 &&
+      ["web", "server"].every((component) =>
+        builds.some(
+          (step) =>
+            step.id === component &&
+            step.with?.tags === undefined &&
+            step.with?.push === undefined &&
+            step.with?.outputs ===
+              `type=image,name=ghcr.io/laugh0608/radishink-${component},push-by-digest=true,name-canonical=true,push=true`,
+        ),
+      ),
+    "两个候选镜像只按 digest 上传，完整标签由发布步骤写入",
+  );
+  const promote = publishSteps.find((step) =>
+    step.run?.includes("imagetools create"),
+  );
+  expect(
+    promote?.run.includes("release-pair.mjs --check-tags") &&
+      promote.if === undefined &&
+      promote["continue-on-error"] === undefined &&
+      promote.run.indexOf("release-pair.mjs --check-tags") <
+        promote.run.indexOf("imagetools create"),
+    "写入完整镜像标签前必须检查两个标签冲突",
+  );
+  try {
+    validatePlan(baseImagePlan);
+  } catch {
+    errors.push("基础镜像源码计划与四份最终清单不一致");
+  }
   expect(
     same(Object.keys(workflow.on ?? {}).sort(), [
       "pull_request",
+      "workflow_call",
       "workflow_dispatch",
     ]),
-    "CI 只能由 PR 或手动触发",
+    "CI 只支持 PR、手动运行与复用调用",
   );
   expect(
     same(workflow.on?.pull_request, { branches: ["main", "dev"] }),
@@ -172,6 +240,11 @@ export function governanceErrors({
       "pnpm install --frozen-lockfile",
       "pnpm lint:server",
       "pnpm test:server",
+      "docker build -f apps/server/Dockerfile -t radishink-server-distribution .",
+      "docker build -f Dockerfile -t radishink-web-distribution .",
+      "pnpm check:image-distribution --server radishink-server-distribution --web radishink-web-distribution",
+      "pnpm check:base-image-plan --server radishink-server-distribution --web radishink-web-distribution",
+      "pnpm test:deployment --server radishink-server-distribution --web radishink-web-distribution",
     ],
   };
   for (const [id, commands] of Object.entries(requiredRuns)) {
@@ -199,6 +272,16 @@ export function governanceErrors({
     );
   }
   const repoSteps = jobs["repo-hygiene"]?.steps ?? [];
+  const serverSteps = jobs["server-quality"]?.steps ?? [];
+  const imageStoreStep = serverSteps.findIndex((step) =>
+    step.run?.includes("io.containerd.snapshotter.v1"),
+  );
+  expect(
+    imageStoreStep >= 0 &&
+      imageStoreStep <
+        serverSteps.findIndex((step) => step.run?.startsWith("docker build ")),
+    "服务端原生任务构建前必须验证 containerd 镜像存储，以核验平台 manifest digest",
+  );
   expect(
     same(jobs["server-quality"]?.strategy, {
       "fail-fast": false,
@@ -215,6 +298,56 @@ export function governanceErrors({
       serverPackage.scripts?.["test:ci"] ===
         "pnpm run build && pnpm run test --runInBand",
     "服务端检查必须无自动修复，先构建再运行含真实子进程的测试",
+  );
+  expect(
+    serverPackage.license === "SEE LICENSE IN ../../LICENSE",
+    "服务端许可元数据必须指向保留历史与第三方边界的根许可",
+  );
+  expect(
+    serverDockerfile.includes(
+      [
+        "RUN --mount=type=cache,id=radishink-native-sources,target=/source-cache " +
+          "\\",
+        "    node --use-env-proxy scripts/distribution/image-notices.mjs --fetch --sources /source-cache && " +
+          "\\",
+        "    node scripts/distribution/image-notices.mjs --modules /runtime/node_modules --sources /source-cache --output /runtime/distribution",
+        "",
+      ].join("\n"),
+    ) &&
+      serverDockerfile.includes(
+        "COPY --from=builder /runtime/distribution ./distribution\n",
+      ) &&
+      serverDockerfile.includes(
+        "RUN node /tmp/distribution-tools/base-notices.mjs /app/base-distribution && rm -r /tmp/distribution-tools\n",
+      ),
+    "服务端镜像必须生成、校验并复制分发材料及基础镜像通知",
+  );
+  expect(
+    webDockerfile.includes(
+      "RUN sh /tmp/capture-web-base-notices.sh && rm /tmp/capture-web-base-notices.sh\n",
+    ),
+    "Web 镜像必须保留可核验的基础镜像材料",
+  );
+  expect(
+    dockerignore.includes("!scripts/distribution/**\n"),
+    "构建上下文必须包含分发门禁源码",
+  );
+  for (const component of ["web", "server"]) {
+    const service = releaseCompose.services?.[component];
+    expect(
+      service &&
+        service.build === undefined &&
+        service.pull_policy === "never" &&
+        service.image ===
+          `\${RADISHINK_${component.toUpperCase()}_IMAGE:?Set a verified fixed image reference}`,
+      `${component}: 拉取式 Compose 不得构建或隐式拉取浮动镜像`,
+    );
+  }
+  expect(
+    releaseCompose.volumes?.workspace?.external === true &&
+      releaseCompose.volumes.workspace.name ===
+        "${RADISHINK_WORKSPACE_VOLUME:?Set the existing workspace volume}",
+    "拉取式 Compose 必须使用显式已存在的工作区卷",
   );
   const range = repoSteps.find(
     (step) => step.name === "Check repository and PR range",
@@ -259,6 +392,39 @@ export function governanceErrors({
       },
     ]),
     "管理员仅可 PR 内 bypass",
+  );
+  const releaseTagRefs = {
+    include: ["dev", "test", "release"].map(
+      (track) => `refs/tags/v[0-9][0-9].[0-9]*.[0-9]*-${track}`,
+    ),
+    exclude: [],
+  };
+  expect(
+    [tagCreationRuleset, tagProtectionRuleset].every(
+      (rule) =>
+        rule.target === "tag" &&
+        rule.enforcement === "active" &&
+        same(rule.conditions?.ref_name, releaseTagRefs),
+    ),
+    "发布 tag 的创建和保护规则必须覆盖相同的三个版本轨道",
+  );
+  expect(
+    same(tagCreationRuleset.rules, [{ type: "creation" }]) &&
+      same(tagCreationRuleset.bypass_actors, [
+        { actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "always" },
+      ]),
+    "仅仓库管理员可绕过发布 tag 的创建限制",
+  );
+  expect(
+    same(tagProtectionRuleset.bypass_actors, []) &&
+      same(tagProtectionRuleset.rules, [
+        {
+          type: "update",
+          parameters: { update_allows_fetch_and_merge: false },
+        },
+        { type: "deletion" },
+      ]),
+    "发布 tag 的更新和删除限制不得有 bypass",
   );
   const rules = new Map((ruleset.rules ?? []).map((rule) => [rule.type, rule]));
   expect(
@@ -316,7 +482,18 @@ export function governanceErrors({
   const scripts = {
     "check:repo": "node scripts/check-repo.mjs",
     "test:governance":
-      "node --test scripts/check-repo.test.mjs scripts/release-metadata.test.mjs scripts/generate-web-notices.test.mjs scripts/vercel-ignore-build.test.mjs",
+      "node --test scripts/check-repo.test.mjs scripts/release-metadata.test.mjs scripts/generate-web-notices.test.mjs scripts/vercel-ignore-build.test.mjs scripts/distribution/image-notices.test.mjs scripts/deployment/release-deploy.test.mjs scripts/distribution/release-pair.test.mjs",
+    "deploy:release": "node scripts/deployment/deploy.mjs",
+    "test:deployment": "node scripts/deployment/release-smoke.mjs",
+    "prepare:image-sources":
+      "node --use-env-proxy scripts/distribution/image-notices.mjs --fetch",
+    "check:source-notices":
+      "node scripts/distribution/verify-source-notices.mjs",
+    "check:image-distribution": "node scripts/distribution/verify-images.mjs",
+    "check:base-image-plan": "node scripts/distribution/verify-base-plan.mjs",
+    "prepare:source-bundle": "node scripts/distribution/source-bundle.mjs",
+    "prepare:release-pair":
+      "node --use-env-proxy scripts/distribution/release-pair.mjs",
     "check:release-tag": "node scripts/release-metadata.mjs",
     "lint:web": "pnpm --filter @wemd/web run lint",
     "test:web": "pnpm --filter @wemd/core --filter @wemd/web run test:ci",
@@ -348,10 +525,24 @@ export function governanceErrors({
 export function loadGovernance() {
   return {
     workflow: parseYaml(read(".github/workflows/ci.yml")),
+    publication: parseYaml(read(".github/workflows/publish.yml")),
+    baseImagePlan: JSON.parse(
+      read("LICENSES/distribution/base-image-plan.json"),
+    ),
     ruleset: JSON.parse(read(".github/rulesets/main-protection.json")),
+    tagCreationRuleset: JSON.parse(
+      read(".github/rulesets/release-tag-creation.json"),
+    ),
+    tagProtectionRuleset: JSON.parse(
+      read(".github/rulesets/release-tag-protection.json"),
+    ),
     settings: JSON.parse(read(".github/repository-settings.json")),
     pkg: JSON.parse(read("package.json")),
     serverPackage: JSON.parse(read("apps/server/package.json")),
+    serverDockerfile: read("apps/server/Dockerfile"),
+    webDockerfile: read("Dockerfile"),
+    dockerignore: read(".dockerignore"),
+    releaseCompose: parseYaml(read("deploy/compose.release.yml")),
     mise: read("mise.toml"),
     vercel: JSON.parse(read("vercel.json")),
     activeWorkflows: readdirSync(resolve(root, ".github/workflows"))
@@ -413,7 +604,7 @@ function main() {
     ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/rulesets/README.md",
     ".github/repository-settings.json",
-    ".github/workflows-disabled/docker-image.yml",
+    ".github/workflows/publish.yml",
     ".github/workflows-disabled/release.yml",
     "docs/README.md",
     "docs/status/current.md",
@@ -434,16 +625,28 @@ function main() {
     "scripts/vercel-ignore-build.mjs",
     "scripts/vercel-ignore-build.test.mjs",
     "scripts/audit-web-bundle.mjs",
+    "deploy/compose.release.yml",
+    "deploy/inspect-workspace.cjs",
+    "scripts/deployment/deploy.mjs",
+    "scripts/deployment/release-deploy.mjs",
+    "scripts/deployment/release-config.mjs",
+    "scripts/deployment/release-deploy.test.mjs",
+    "scripts/deployment/release-smoke.mjs",
+    "scripts/distribution/base-inventory.mjs",
+    "scripts/distribution/verify-base-plan.mjs",
+    "scripts/distribution/source-bundle.mjs",
+    "scripts/distribution/source-archive.mjs",
+    "scripts/distribution/registry.mjs",
+    "scripts/distribution/release-pair.mjs",
+    "scripts/distribution/release-pair.test.mjs",
+    "LICENSES/distribution/base-image-plan.json",
   ];
   for (const path of required)
     if (!existsSync(resolve(root, path))) errors.push(`缺少 ${path}`);
   if (errors.length) throw new Error(errors.join("\n"));
   errors.push(...governanceErrors(loadGovernance()));
-  if (
-    read("AGENTS.md").split("\n").slice(1).join("\n") !==
-    read("CLAUDE.md").split("\n").slice(1).join("\n")
-  )
-    errors.push("AGENTS / CLAUDE 正文未同步");
+  if (!readFileSync(resolve(root, "AGENTS.md")).equals(readFileSync(resolve(root, "CLAUDE.md"))))
+    errors.push("AGENTS.md 与 CLAUDE.md 必须逐字节一致");
   errors.push(
     ...licenseErrors({
       project: read("LICENSE"),

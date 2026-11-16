@@ -101,71 +101,50 @@ test("CLI returns metadata and fails without emitting publication output for inv
   }
 });
 
-test("paused Docker template validates before login and builds exclusively with generated metadata", () => {
-  const workflow = parseYaml(
-    readFileSync(
-      join(root, ".github/workflows-disabled/docker-image.yml"),
-      "utf8",
-    ),
+test("server metadata uses the same full tag and binds OCI revision and source", () => {
+  const value = releaseMetadata("v26.11.1-test", "server", "a".repeat(40));
+  assert.equal(value.image, "ghcr.io/laugh0608/radishink-server");
+  assert.ok(value.tags.every((tag) => tag.startsWith(value.image + ":")));
+  assert.equal(
+    value.labels["org.opencontainers.image.revision"],
+    "a".repeat(40),
   );
-  assert.deepEqual(workflow.on, {
-    push: { tags: ["v*-dev", "v*-test", "v*-release"] },
-  });
-  const steps = workflow.jobs["build-and-push"].steps;
-  const index = steps.findIndex((step) => step.id === "meta");
-  assert.ok(
-    index >= 0 &&
-      index <
-        steps.findIndex((step) =>
-          step.uses?.startsWith("docker/login-action@"),
-        ),
-  );
-  const metadataStep = steps[index];
-  assert.equal(metadataStep.env.RELEASE_TAG, "${{ github.ref_name }}");
-  assert.equal(metadataStep.if, undefined);
-  assert.equal(metadataStep["continue-on-error"], undefined);
-  const build = steps.find((step) =>
-    step.uses?.startsWith("docker/build-push-action@"),
-  );
-  assert.equal(build.with.tags, "${{ steps.meta.outputs.tags }}");
-  assert.equal(build.with.labels, "${{ steps.meta.outputs.labels }}");
+  assert.throws(() => releaseMetadata("v26.11.1-test", "desktop"));
+  assert.throws(() => releaseMetadata("v26.11.1-test", "server", "short"));
+});
 
-  const directory = mkdtempSync(join(tmpdir(), "radishink-release-"));
-  const output = join(directory, "output");
+test("source product version and track mismatches cannot emit publication metadata", () => {
+  const directory = mkdtempSync(join(tmpdir(), "radishink-source-version-"));
   try {
-    for (const tag of [
-      "v26.10.1-dev",
-      "v26.10.1.0501-test",
-      "v26.10.1-release",
-      "main",
-      "v1.4.7",
-      "v26.10.1-test\n",
-    ]) {
-      writeFileSync(output, "");
+    const source = join(directory, "version.json");
+    writeFileSync(
+      source,
+      JSON.stringify({ version: "26.11.1", track: "test" }),
+    );
+    for (const tag of ["v26.11.1-test", "v26.11.2-test", "v26.11.1-release"]) {
       const result = spawnSync(
-        "bash",
-        ["-e", "-o", "pipefail", "-c", metadataStep.run],
-        {
-          cwd: root,
-          env: { ...process.env, RELEASE_TAG: tag, GITHUB_OUTPUT: output },
-          encoding: "utf8",
-        },
+        process.execPath,
+        [
+          script,
+          "--tag",
+          tag,
+          "--component",
+          "server",
+          "--revision",
+          "a".repeat(40),
+          "--source-version",
+          source,
+        ],
+        { encoding: "utf8" },
       );
-      assert.ifError(result.error);
-      const content = readFileSync(output, "utf8");
-      if (["main", "v1.4.7", "v26.10.1-test\n"].includes(tag)) {
-        assert.notEqual(result.status, 0, tag);
-        assert.equal(content, "");
-      } else {
-        assert.equal(result.status, 0, result.stderr);
-        assert.ok(content.includes(`tag=${tag}\n`));
-        assert.ok(
-          content.includes(`org.opencontainers.image.version=${tag}\n`),
-        );
+      if (tag === "v26.11.1-test")
         assert.equal(
-          content.includes(`${IMAGE_NAME}:latest\n`),
-          tag.endsWith("-release"),
+          JSON.parse(result.stdout).image,
+          "ghcr.io/laugh0608/radishink-server",
         );
+      else {
+        assert.notEqual(result.status, 0);
+        assert.equal(result.stdout, "");
       }
     }
   } finally {

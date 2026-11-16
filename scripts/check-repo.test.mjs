@@ -21,6 +21,130 @@ test("current repository contract is coherent", () => {
 
 const mutations = [
   [
+    "publish workflow downloads the complete source companion again",
+    (x) => {
+      x.publication.jobs.publish.steps.unshift({
+        run: "node scripts/distribution/source-bundle.mjs --fetch\n",
+      });
+    },
+  ],
+  [
+    "containerd image store verification removed",
+    (x) => {
+      x.workflow.jobs["server-quality"].steps = x.workflow.jobs[
+        "server-quality"
+      ].steps.filter(
+        (step) => !step.run?.includes("io.containerd.snapshotter.v1"),
+      );
+    },
+  ],
+  [
+    "base source inventory gate removed",
+    (x) => {
+      x.workflow.jobs["server-quality"].steps = x.workflow.jobs[
+        "server-quality"
+      ].steps.filter(
+        (step) => !step.run?.startsWith("pnpm check:base-image-plan"),
+      );
+    },
+  ],
+  [
+    "source identities omitted from reviewed plan",
+    (x) => {
+      x.baseImagePlan.requirements.pop();
+    },
+  ],
+  [
+    "candidate build can write a full version tag",
+    (x) => {
+      x.publication.jobs.publish.steps.find(
+        (step) => step.id === "web",
+      ).with.tags = "radishink-web:v26.11.1-test";
+    },
+  ],
+  [
+    "publish workflow loses the conflict check",
+    (x) => {
+      const step = x.publication.jobs.publish.steps.find((entry) =>
+        entry.run?.includes("--check-tags"),
+      );
+      step.run = step.run.replace(
+        "release-pair.mjs --check-tags",
+        "release-pair.mjs",
+      );
+    },
+  ],
+  [
+    "pull deployment loses smoke",
+    (x) => {
+      x.workflow.jobs["server-quality"].steps = x.workflow.jobs[
+        "server-quality"
+      ].steps.filter((step) => !step.run?.startsWith("pnpm test:deployment"));
+    },
+  ],
+  [
+    "pull Compose silently builds",
+    (x) => {
+      x.releaseCompose.services.server.build = ".";
+    },
+  ],
+  [
+    "pull Compose uses a floating image",
+    (x) => {
+      x.releaseCompose.services.web.image =
+        "ghcr.io/laugh0608/radishink-web:latest";
+    },
+  ],
+  [
+    "pull Compose creates an implicit empty volume",
+    (x) => {
+      delete x.releaseCompose.volumes.workspace.external;
+    },
+  ],
+  [
+    "missing image verification",
+    (x) => {
+      x.workflow.jobs["server-quality"].steps = x.workflow.jobs[
+        "server-quality"
+      ].steps.filter(
+        (step) => !step.run?.startsWith("pnpm check:image-distribution"),
+      );
+    },
+  ],
+  [
+    "missing source material build gate",
+    (x) => {
+      x.serverDockerfile = x.serverDockerfile.replace(
+        "node scripts/distribution/image-notices.mjs --modules",
+        "echo scripts/distribution/image-notices.mjs --modules",
+      );
+    },
+  ],
+  [
+    "generated materials omitted from final image",
+    (x) => {
+      x.serverDockerfile = x.serverDockerfile.replace(
+        "COPY --from=builder /runtime/distribution ./distribution\n",
+        "",
+      );
+    },
+  ],
+  [
+    "server metadata loses historical license scope",
+    (x) => {
+      x.serverPackage.license = "UNLICENSED";
+    },
+  ],
+  [
+    "Web base notices omitted",
+    (x) => {
+      x.webDockerfile = x.webDockerfile.replace(
+        "RUN sh /tmp/capture-web-base-notices.sh",
+        "RUN true #",
+      );
+    },
+  ],
+  [
     "server test bypasses build",
     (x) => {
       x.serverPackage.scripts["test:ci"] = "echo success";
@@ -133,6 +257,24 @@ const mutations = [
     "wrong protected branch",
     (x) => {
       x.ruleset.conditions.ref_name.include = ["refs/heads/master"];
+    },
+  ],
+  [
+    "release tag track excluded from protection",
+    (x) => {
+      x.tagProtectionRuleset.conditions.ref_name.include.pop();
+    },
+  ],
+  [
+    "tag creation bypass extends to moving or deleting tags",
+    (x) => {
+      x.tagProtectionRuleset.bypass_actors = x.tagCreationRuleset.bypass_actors;
+    },
+  ],
+  [
+    "release tag creation rule removed",
+    (x) => {
+      x.tagCreationRuleset.rules = [];
     },
   ],
   [

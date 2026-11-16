@@ -1,6 +1,6 @@
 # 自托管部署验收
 
-本文串联本地 P4 验证入口，不替代每次阶段 PR 的远程 CI，也不授权镜像发布。实际结果见 [P4-4 记录](../records/2026-10-29-deployment-p4-4.md)，停止线以[当前状态](../status/current.md)为准。
+本文串联本地 P4 验证入口，不替代每次阶段 PR 的远程 CI，也不授权镜像发布。部署结果见 [P4-4 记录](../records/2026-10-29-deployment-p4-4.md)，后续分发、受控编排与发布材料证据由[2026-11-03 全日回顾](../records/2026-11-03-day-review.md)串联，停止线以[当前状态](../status/current.md)为准。
 
 ## 操作顺序
 
@@ -10,7 +10,7 @@
 4. 需要转换账号模式时，单独按[共享工作区](shared-workspace.md)执行先备份、后转换；配置开关不是迁移工具。
 5. 执行下列镜像 / 浏览器验证和完整基线，复核日志与分发材料，再按对应授权推进远程 CI、集成与发布。
 
-所有脚本仅使用合成账号 / 稿件。运行时会创建自己的临时命名卷、容器和临时证书，正常结束或受支持的停止信号会清理；不要指向生产卷。异常终止后仅清理本轮输出中列出的资源。两个 Compose smoke 共用 4184–4186，必须串行执行。
+所有脚本仅使用合成账号 / 稿件。运行时会创建自己的临时命名卷、容器和临时证书，正常结束或受支持的停止信号会清理；不要指向生产卷。异常终止后仅清理本轮输出中列出的资源。两个 Compose smoke 共用 4184–4186，必须串行执行；固定版本编排的 `test:deployment` 使用 4294，两个架构也须串行运行。
 
 ## 双架构最终镜像
 
@@ -24,6 +24,20 @@ docker buildx build --platform linux/amd64 --load -f apps/server/Dockerfile -t r
 
 mise exec -- node scripts/deployment/runtime-matrix.mjs radishink-p4-server-arm64 radishink-p4-server-amd64
 ```
+
+构建后另核验实际分发材料、基础源码需求清单和固定版本编排。以下循环按架构串行执行；前两项使用无网络只读容器，第三项会创建自己的合成服务与卷并在结束后清理：
+
+```sh
+bash -e <<'SH'
+for arch in arm64 amd64; do
+  mise exec -- pnpm check:image-distribution --server "radishink-p4-server-${arch}" --web "radishink-p4-web-${arch}"
+  mise exec -- pnpm check:base-image-plan --server "radishink-p4-server-${arch}" --web "radishink-p4-web-${arch}"
+  mise exec -- pnpm test:deployment --server "radishink-p4-server-${arch}" --web "radishink-p4-web-${arch}"
+done
+SH
+```
+
+镜像实际分发范围和对应源码入口按[镜像分发说明](image-distribution.md)复核。双镜像成对记录、Release 附件和 tag 检查另按[发布材料](release-materials.md)验收。受控停机、升级和失败恢复的操作边界见[固定版本编排](release-compose.md)。
 
 `runtime-matrix.mjs` 在最终镜像中挂载只读测试入口，使用独立持久命名卷运行五个 SIGKILL 提交阶段及四账号容量探针，再运行受限 tmpfs 的真实 ENOSPC、旧 schema 升级 / 恢复和双向归属转换。复用正式编译产物，不替换 SQLite、Argon2 或 Sharp。容量探针保存约 253 MiB 合成数据，999 篇种子文章逐条持久化，amd64 模拟执行可能显著较慢。进程中止不等于宿主断电，模拟执行时间不代表原生硬件性能。
 
@@ -60,7 +74,7 @@ docker run --rm -i radishink-p4-server-arm64 node < scripts/deployment/image-lic
 docker run --rm --platform linux/amd64 -i radishink-p4-server-amd64 node < scripts/deployment/image-license-inventory.cjs > /tmp/radishink-server-licenses-amd64.json
 ```
 
-清单覆盖实际复制的包目录，包括未被当前架构加载的可选包，记录版本、声明、许可文件与 README 摘要。`needsReview` 仅表示缺少常见许可文件名，不等于无许可或已合规；README 里的许可全文和链接需继续核对。该脚本不是放行门禁，也不替代完整通知、源码提供方式或再分发审查。基础镜像材料仍按其分发条款保留，项目及 WeMD 原始许可已在镜像 `/app/LICENSE` 与 `/app/LICENSES/` 保留。当前发现与镜像发布停止线见 P4-4 记录。
+清单覆盖实际复制的包目录，包括未被当前架构加载的可选包，记录版本、声明、许可文件与 README 摘要。`needsReview` 仅表示缺少常见许可文件名，不等于无许可或已合规。该历史盘点脚本继续提供只读诊断；实际构建现在还执行 [分发材料生成与最终镜像校验](image-distribution.md)，补充已核对的 README / 组合声明、完整原生通知、锁定源码和物理包摘要。基础层材料及正式分发前的源码复核边界也统一见该文档，不能把旧盘点脚本当作当前放行门禁。
 
 ## 阶段集成
 
