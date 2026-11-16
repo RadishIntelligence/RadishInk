@@ -4,7 +4,7 @@
 
 - `main-protection.json`：只保护 `main` 的 branch Ruleset。
 - [创建规则](release-tag-creation.json)与[保护规则](release-tag-protection.json)：发布 tag 的目标配置，远端启用状态见[当前状态](../../docs/status/current.md)。
-- `../repository-settings.json`：默认分支与合并选项目标，需单独配置，不属于 Ruleset 内容；本次未应用该模板。
+- [仓库设置模板](../repository-settings.json)定义默认分支与合并选项，由仓库级设置单独管理。远端回读见[当前状态](../../docs/status/current.md#当前产品与停止线)。
 
 ## 策略
 
