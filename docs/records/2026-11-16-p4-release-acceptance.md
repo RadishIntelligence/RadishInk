@@ -57,3 +57,15 @@ Web 通过 `docker pull` 获取 `sha256:0121c85da0404ca1ec36106e2694aec49cbb67f5
 - 停写备份包含 14 个文件、130017 字节。`storage-cli restore` 把一篇稿件恢复到独立空卷，`check` 无未知路径，切换到恢复卷后再次通过预检与 HTTPS `ready`。部署 ID、账号归属、正文和原图保留，epoch 轮换。旧会话写入返回 401，旧 CSRF 搭配新会话返回 403，重新登录后合法写入使 revision 从 3 推进到 4。
 
 本轮覆盖已发布镜像的本机原生 arm64 和生产配置下的 HTTPS 链路。外部域名、公开信任证书和实际 amd64 测试主机仍待对应环境验收。 [当前状态](../status/current.md#接下来的事项)
+
+## 本机 amd64 镜像预演
+
+下载 `v26.11.1.1601-test` 的 `release-lock-amd64.json` 和 `release-pair.json`，核对附件 SHA-256、源提交和平台摘要。Web 按固定摘要拉取。Server 常规拉取停滞后，从同一 GHCR 来源分段取得各层，核对 manifest、config 和全部层的摘要及大小，再载入本机缓存。用固定部署工具的 `releaseLock` 和 `verifyImage` 校验两份镜像，Web manifest 为 `sha256:d9b570c8f03de6f6445e1baf1c1c132946601f12ee27c2963111a6a00e2c8481`，Server manifest 为 `sha256:a48efbdf57c45881ac81ff709be735e7d9b506a05542ee33e52d3800fc8f45f6`。
+
+在 ARM64 OrbStack 上设置 `DOCKER_DEFAULT_PLATFORM=linux/amd64`，将两份固定镜像传给 `scripts/deployment/compose-smoke.mjs --recovery`。两个非 root 服务通过健康检查，后端无宿主端口。生产会话 Cookie、账号隔离、正文与原图字节、停机重建均通过。独立空卷恢复保留部署 ID、归属、正文和原图并轮换 epoch，旧 Cookie 与旧 CSRF 拒绝写入。测试使用本机回环端口和合成数据，临时容器、卷和端口已清理。原生 amd64 部署与外部 HTTPS 验收待对应环境。 [当前状态](../status/current.md#接下来的事项)
+
+## 本机 Docker 部署
+
+本批使用本机 Docker 作为部署环境。OrbStack 的原生 `linux/arm64` 使用 `v26.11.1.1601-test` 的 arm64 lock，两份镜像按完整 tag 和平台摘要获得。Compose 项目名 `radishink-local`，入口为 `http://127.0.0.1:8080/`，使用回环 HTTP、`RADISHINK_ENV=development` 与本地账号模式。工作区、备份分别存放在独立的 `radishink-local-workspace` 和 `radishink-local-backups` 命名卷。维护用 lock、公开配置和部署记录在仓库忽略目录 `.tmp/radishink-local/`，该目录由本机账号独占。
+
+用交互式 `account-cli init-admin` 创建本地管理员。`deploy:release preflight` 和 `apply --no-pull` 均通过，初始化备份的独立恢复复核通过，Web 和 Server 均为 `healthy`。Web 首页为 HTTP 200，同源服务端返回 `ready`。Chromium 实测管理员登录、进入服务器工作区和退出。部署实例保留运行。停机时先执行 `docker stop radishink-local-web-1`，再执行 `docker stop radishink-local-server-1`，保留两个命名卷。 [固定版本维护](../deployment/release-compose.md)

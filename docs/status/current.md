@@ -4,9 +4,11 @@
 
 `v26.11.1.0902-test` 已通过本机隔离 arm64 Compose 验收。`v26.11.1.1601-test` 又通过本机 arm64 的生产配置 HTTPS 入口验收，覆盖安全会话、写作与 ZIP、私有 API 缓存及独立空卷恢复。 [部署验收记录](../records/2026-11-16-p4-release-acceptance.md#本机-https-配置验收)
 
+本批以本机 Docker 为部署环境。`v26.11.1.1601-test` 在原生 arm64 上已通过首页、服务端 readiness 和浏览器账号登录验收，运行入口为 `http://127.0.0.1:8080/`。 [本机部署记录](../records/2026-11-16-p4-release-acceptance.md#本机-docker-部署)
+
 首个双镜像测试版于 11 月 10 日发布，tag 指向 `80edec7`。amd64 和 arm64 原生 CI 均通过，两份镜像的完整标签、平台摘要和三个 Release 附件均已匿名核对。[Pre-release](https://github.com/laugh0608/RadishInk/releases/tag/v26.11.1.0902-test) · [Actions](https://github.com/laugh0608/RadishInk/actions/runs/42647722683) · [首发记录](../records/2026-11-09-day-review.md#首发结果)
 
-P1 / P2 与 PWA 已进入开发预发布。P3 / P4 源码已通过 PR #5 集成并回流。实际 amd64 部署、外部域名与公开信任证书的 HTTPS 入口及真实 OIDC、手机和公众号仍待对应环境验收。
+P1 / P2 与 PWA 已进入开发预发布。P3 / P4 源码已通过 PR #5 集成并回流。外部部署、真实 OIDC、手机和公众号按对应环境安排补验。
 
 从[能力专题地图](../planning/topics.md#当前接续工作的追踪方式)定位以下工作的主要归属、任务和验收来源；本页维护实际阶段与接续状态，地图不另建进度表。
 
@@ -40,7 +42,7 @@ P1 / P2 与 PWA 已进入开发预发布。P3 / P4 源码已通过 PR #5 集成�
 
 P4-1 至 P4-3 交付范围与证据见[专题地图](../planning/topics.md#子专题归属与验收入口)；下一轮按以下顺序推进，详细职责和验收条件统一见 [P4 开发顺序](../planning/self-hosted-storage.md#下一轮开发顺序)：
 
-1. **按可用环境补部署验收。** 本机 arm64 已用发布镜像验证生产配置下的 HTTPS 链路。在获准的原生 amd64 测试主机或具备外部域名与公开信任证书的 HTTPS 测试环境，按目标架构 lock 补对应链路。若常规拉取受阻，记录受影响组件、失败阶段及固定摘要的获取方式。 [本机 HTTPS 实测](../records/2026-11-16-p4-release-acceptance.md#本机-https-配置验收) · [固定版本部署](../deployment/release-compose.md) · [部署验收](../deployment/acceptance.md)
+1. **外部部署按需补验。** 本批本机 Docker 部署已验收。后续如需覆盖原生 amd64 主机或公开信任证书的外部 HTTPS 入口，按目标架构 lock 在对应获准环境补验。 [本机部署记录](../records/2026-11-16-p4-release-acceptance.md#本机-docker-部署) · [amd64 预演](../records/2026-11-16-p4-release-acceptance.md#本机-amd64-镜像预演) · [固定版本部署](../deployment/release-compose.md)
 2. **真实 Radish 联调按用户要求延期。** 未来实际 issuer、独立客户端、HTTPS 回调和测试身份具备对应授权后，与部署环境一起验证准入、绑定、禁用、本站退出和密钥轮换。配置未就绪时继续不依赖它的 P4 本地工作，不把合成发行方通过当作真实联通。物理断电与跨物理设备仍未验证。
 3. **P1 / P2 真实使用环境验收继续延后。** 用户有时间或开发稳定后，再补手机真机的存储、图片、ZIP 下载回导，以及[公众号验收](../deployment/wechat-acceptance.md)的粘贴、保存重开、手机明暗、行高、公式和解包后手工插图。桌面证据不替代这些结果，本地图片自动转存仍不承诺。
 
