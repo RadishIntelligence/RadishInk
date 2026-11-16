@@ -14,11 +14,11 @@
 
 ## 版本与镜像
 
-历史 tag 保留，新增 tag 使用 RadishInk 日历版本与 `dev / test / release` 轨道，Docker 固定标签与完整 Git tag 一致。格式、别名、只读检查和首次发布前的准备统一见 [版本与镜像规则](versioning.md)。本地命名检查不改变远程 tag 保护，也不启用发布工作流。
+历史 tag 保留，新增 tag 使用 RadishInk 日历版本与 `dev / test / release` 轨道，Docker 固定标签与完整 Git tag 一致。格式、别名、只读检查和发布准备统一见 [版本与镜像规则](versioning.md)。
 
 ## CI 契约
 
-`.github/workflows/ci.yml` 只在目标为 `main` / `dev` 的 PR 和手动运行时执行，普通 push 不触发。主线唯一 required context 为 **Candidate Quality**，聚合下面三项：
+[PR Checks](../../.github/workflows/ci.yml) 由目标为 `main` / `dev` 的 PR、手动运行和发布工作流的 `workflow_call` 触发。主线唯一 required context 为 **Candidate Quality**，聚合下面三项：
 
 | 组件           | 执行内容                                                                                                                                                                                               |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -28,7 +28,7 @@
 
 聚合 job 使用 `if: always()`，只有全部组件为 `success` 才通过；失败、取消、跳过都不放行。工作流无路径过滤，避免必需检查因只改文档而永远等待。默认测试 GitHub PR 合并结果，提交范围单独使用 base / head SHA 检查。
 
-PR CI 不发布镜像、Release 或站点，只使用只读仓库权限，不读取生产凭据。P3-1 将服务端纳入候选聚合，`validate:web` 仍仅代表 Web 基线，服务端使用 `validate:server`；`apps/electron` 尚未纳入聚合，触及时另行检查。新增服务端矩阵的本地配置与实际远程运行分别记录，P3 配置已推送到 `dev`，远程运行结果以 [当前状态](../status/current.md) 为准；当时实施证据见 [P3-1 记录](../records/2026-10-25-server-storage-foundation.md)。
+PR CI 不发布镜像、Release 或站点，只使用只读仓库权限，不读取生产凭据。P3-1 将服务端纳入候选聚合，`validate:web` 仍仅代表 Web 基线，服务端使用 `validate:server`；`apps/electron` 尚未纳入聚合，触及时另行检查。服务端门禁的实施见 [P3-1 记录](../records/2026-10-25-server-storage-foundation.md)，P4 发布批次的实际远程运行见 [PR #6 集成记录](../records/2026-11-16-p4-release-acceptance.md#阶段主线集成)。
 
 `yaml` 是检查器直接依赖，沿用上游锁文件已存在的版本，不进入浏览器运行代码。CI 与本地检查通过同一组 package scripts 执行，不能只维护其中一边。
 
