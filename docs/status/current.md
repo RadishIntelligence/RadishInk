@@ -1,8 +1,10 @@
 # 当前状态
 
-2026-11-10 更新。首个双镜像测试版 `v26.11.1.0902-test` 已发布，tag 指向 `80edec7`。amd64 和 arm64 原生 CI 均通过。Web、Server 的完整标签、平台摘要和三个 Release 附件均已匿名核对。Release 使用 GitHub 自动生成的仓库源码快照，并链接到对应版本的镜像来源和许可说明。[Pre-release](https://github.com/laugh0608/RadishInk/releases/tag/v26.11.1.0902-test) · [Actions](https://github.com/laugh0608/RadishInk/actions/runs/42647722683) · [首发记录](../records/2026-11-09-day-review.md#首发结果)
+2026-11-16 更新。`v26.11.1.0902-test` 已通过本机隔离 arm64 Compose 验收，覆盖空卷部署、浏览器写作与 ZIP 导出、独立卷恢复及旧会话拒写。[部署验收记录](../records/2026-11-16-p4-release-acceptance.md)
 
-P1 / P2 与 PWA 已进入开发预发布。P3 / P4 源码已通过 PR #5 集成并回流。P4 下一步是在获准的测试环境用已发布镜像与部署 lock 做实际拉取和部署验收。真实 OIDC、手机 / 公众号及真实环境延期项继续保留。[编排说明](../deployment/release-compose.md)
+首个双镜像测试版于 11 月 10 日发布，tag 指向 `80edec7`。amd64 和 arm64 原生 CI 均通过，两份镜像的完整标签、平台摘要和三个 Release 附件均已匿名核对。[Pre-release](https://github.com/laugh0608/RadishInk/releases/tag/v26.11.1.0902-test) · [Actions](https://github.com/laugh0608/RadishInk/actions/runs/42647722683) · [首发记录](../records/2026-11-09-day-review.md#首发结果)
+
+P1 / P2 与 PWA 已进入开发预发布。P3 / P4 源码已通过 PR #5 集成并回流。实际 amd64 部署、生产 HTTPS 入口及真实 OIDC、手机和公众号仍待对应环境验收。
 
 从[能力专题地图](../planning/topics.md#当前接续工作的追踪方式)定位以下工作的主要归属、任务和验收来源；本页维护实际阶段与接续状态，地图不另建进度表。
 
@@ -28,7 +30,7 @@ P1 / P2 与 PWA 已进入开发预发布。P3 / P4 源码已通过 PR #5 集成�
 | P2a  | [文章目录与资源](../planning/article-assets.md)                                       | 存储、恢复、图片、预览与系统补测修正已合入         |
 | P2b  | [可移植文件闭环](../planning/markdown-file-import-export.md#下一阶段文章包与文件菜单) | ZIP 与跨存储往返已合入并验证；公众号与手机实测延后 |
 | P3   | [服务器工作区契约](../planning/server-workspace-contract.md)                          | P3-4 OIDC 本地合成验证通过；真实发行方待联调       |
-| P4   | [自托管与账号](../planning/self-hosted-storage.md)                                    | 双镜像测试版已发布，实际部署与真实环境待验         |
+| P4   | [自托管与账号](../planning/self-hosted-storage.md)                                    | 双镜像测试版已通过本机 arm64 部署与恢复验收        |
 
 完整依赖见 [工作区演进计划](../planning/writing-workspace-roadmap.md)。P2a / P2b 共同满足后才宣称“图片随文且可移植”，本地图片转存到公众号另需实际证据。
 
@@ -36,8 +38,8 @@ P1 / P2 与 PWA 已进入开发预发布。P3 / P4 源码已通过 PR #5 集成�
 
 P4-1 至 P4-3 交付范围与证据见[专题地图](../planning/topics.md#子专题归属与验收入口)；下一轮按以下顺序推进，详细职责和验收条件统一见 [P4 开发顺序](../planning/self-hosted-storage.md#下一轮开发顺序)：
 
-1. **在测试环境验收已发布镜像。** 获得部署授权后，从 Pre-release 选取目标架构的 lock，用完整 tag 与 digest 拉取 Web 和 Server。用独立测试卷验证初始化、前台可用、服务端 ready、备份与独立恢复，并记录测试环境与证据。[固定版本部署](../deployment/release-compose.md) · [部署验收](../deployment/acceptance.md)
-2. **准备下一版时验证干净检出。** 用空输出目录复验发布记录与两个 lock 的生成，并在下一次候选发布确认 CI 能直接创建 Release。第三方来源和许可按实际镜像维护。[发布流程](../deployment/release-materials.md#主仓库发布流程) · [分发说明](../deployment/image-distribution.md)
+1. **准备下一版时验证干净检出。** 用空输出目录复验发布记录与两个 lock 的生成，并在下一次候选发布确认 CI 能直接创建 Release。第三方来源和许可按实际镜像维护。[发布流程](../deployment/release-materials.md#主仓库发布流程) · [分发说明](../deployment/image-distribution.md)
+2. **按可用环境补部署验收。** 在获准的 amd64 测试主机或具备生产 HTTPS 入口的测试环境，按目标架构 lock 补对应链路。若常规拉取受阻，记录受影响组件、失败阶段及固定摘要的获取方式。[固定版本部署](../deployment/release-compose.md) · [部署验收](../deployment/acceptance.md)
 3. **修正已发现的远程治理偏差。** 已只读发现远端 `allow_squash_merge=true` 与仓库禁用 Squash 的规范不一致，应在获准修改远程设置后关闭并核验；PR #5 使用 merge commit，本次未修改设置。
 4. **真实 Radish 联调按用户要求延期。** 未来实际 issuer、独立客户端、HTTPS 回调和测试身份具备对应授权后，与部署环境一起验证准入、绑定、禁用、本站退出和密钥轮换。配置未就绪时继续不依赖它的 P4 本地工作，不把合成发行方通过当作真实联通。物理断电与跨物理设备仍未验证。
 5. **P1 / P2 真实使用环境验收继续延后。** 用户有时间或开发稳定后，再补手机真机的存储、图片、ZIP 下载回导，以及[公众号验收](../deployment/wechat-acceptance.md)的粘贴、保存重开、手机明暗、行高、公式和解包后手工插图。桌面证据不替代这些结果，本地图片自动转存仍不承诺。
@@ -54,11 +56,11 @@ P4-1 至 P4-3 交付范围与证据见[专题地图](../planning/topics.md#子�
 
 历史命令、计数、环境与已执行范围见[整理前验证摘要](../records/planning-sources-before-alignment-2026-11-01.md#验证状态)及其链接的原记录。11 月 3 日的 Web / server 基线、镜像分发与部署编排检查见[全日回顾](../records/2026-11-03-day-review.md)。11 月 9 日验证了 Debian、aports、Nginx 供应商和运行时工具的真实输入及仓库门禁。[Debian 验证](../records/2026-11-09-debian-source-completion.md#验证) · [aports 验证](../records/2026-11-09-aports-source-review.md#验证与接续) · [Nginx 供应商验证](../records/2026-11-09-nginx-vendor-source-review.md#验证与接续) · [运行时验证](../records/2026-11-09-runtime-source-review.md#验证与接续)
 
-| 范围                        | 证据与未覆盖面                                                                                                                                                                                                    |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P1 / P2、桌面与 PWA         | [验证基线](../development/validation.md#工作区演进的验证入口)、[桌面证据](../records/2026-10-25-desktop-browser-acceptance.md)、[PWA 记录](../records/2026-10-25-pwa-safe-update.md)；手机真机、公众号仍延期      |
-| P3 持久化、API、Web 与 OIDC | [P3 切片入口](../planning/topics.md#子专题归属与验收入口)及对应原记录；合成发行方不是实际 Radish 联通，故障测试不替代物理断电                                                                                     |
-| P4 部署与双镜像发布         | [P4-4 记录](../records/2026-10-29-deployment-p4-4.md)、[部署验收](../deployment/acceptance.md)、[双镜像首发](../records/2026-11-09-day-review.md#首发结果)。本地与 CI 合成部署、GHCR 发布及真实测试环境分别验收。 |
+| 范围                        | 证据与未覆盖面                                                                                                                                                                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1 / P2、桌面与 PWA         | [验证基线](../development/validation.md#工作区演进的验证入口)、[桌面证据](../records/2026-10-25-desktop-browser-acceptance.md)、[PWA 记录](../records/2026-10-25-pwa-safe-update.md)；手机真机、公众号仍延期                          |
+| P3 持久化、API、Web 与 OIDC | [P3 切片入口](../planning/topics.md#子专题归属与验收入口)及对应原记录；合成发行方不是实际 Radish 联通，故障测试不替代物理断电                                                                                                         |
+| P4 部署与双镜像发布         | [P4-4 记录](../records/2026-10-29-deployment-p4-4.md)、[部署验收](../deployment/acceptance.md)、[双镜像首发](../records/2026-11-09-day-review.md#首发结果)、[已发布镜像 arm64 实测](../records/2026-11-16-p4-release-acceptance.md)。 |
 
 本地实现、已合入源码、源码预发布、静态站点部署、镜像发布和服务端部署分别记录。接续事项与停止线按上文执行。
 

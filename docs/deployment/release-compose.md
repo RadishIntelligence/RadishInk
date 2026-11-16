@@ -1,6 +1,6 @@
 # 固定版本 Compose 与受控维护
 
-本文提供独立于[本地构建 Compose](compose.md)的拉取式配置和维护工具。镜像尚未实际发布，示例 tag / SHA 均为不可直接部署的占位值；实际发布状态见[当前状态](../status/current.md)，本轮本地证据见[实施记录](../records/2026-11-03-release-compose.md)。不启用发布工作流，不把本地合成部署写作远程上线。
+本文提供独立于[本地构建 Compose](compose.md)的拉取式配置和维护工具。部署已发布版本时，从对应 [GitHub Release](https://github.com/laugh0608/RadishInk/releases) 下载目标架构的 `release-lock-arm64.json` 或 `release-lock-amd64.json`。示例 tag / SHA 为占位值。当前可验收版本与部署进度见[当前状态](../status/current.md)，本地编排验证见[实施记录](../records/2026-11-03-release-compose.md)。
 
 ## 固定版本与配置
 
@@ -74,7 +74,7 @@ mise exec -- pnpm deploy:release apply \
 
 维护锁容器名和 run 标识可从记录追溯。异常退出留下的锁只能在确认没有维护进程、核对对应记录和容器标签后显式清理；不自动根据 PID 或超时抢锁。若锁清理失败，即使应用已 ready 也会返回需要处理的错误，并在记录中保留锁容器 ID。
 
-## 验证入口与尚未启用的发布
+## 验证入口与发布流程
 
 ```sh
 mise exec -- pnpm test:governance
