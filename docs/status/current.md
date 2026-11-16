@@ -44,7 +44,7 @@ P4 的镜像分发、发布工作流和固定版本部署后续批次通过 PR #
 
 P4-1 至 P4-3 交付范围与证据见[专题地图](../planning/topics.md#子专题归属与验收入口)；下一轮按以下顺序推进，详细职责和验收条件统一见 [P4 开发顺序](../planning/self-hosted-storage.md#下一轮开发顺序)：
 
-1. **外部部署按需补验。** 本批本机 Docker 部署已验收。后续如需覆盖原生 amd64 主机或公开信任证书的外部 HTTPS 入口，按目标架构 lock 在对应获准环境补验。 [本机部署记录](../records/2026-11-16-p4-release-acceptance.md#本机-docker-部署) · [amd64 预演](../records/2026-11-16-p4-release-acceptance.md#本机-amd64-镜像预演) · [固定版本部署](../deployment/release-compose.md)
+1. **外部部署按需补验。** 本机 Docker 部署、两版已发布镜像之间的原卷升级及升级前备份独立恢复已验收。后续如需覆盖原生 amd64 主机或公开信任证书的外部 HTTPS 入口，按目标架构 lock 在对应获准环境补验。 [本机部署记录](../records/2026-11-16-p4-release-acceptance.md#本机-docker-部署) · [版本升级](../records/2026-11-16-p4-release-acceptance.md#已发布版本原卷升级) · [amd64 预演](../records/2026-11-16-p4-release-acceptance.md#本机-amd64-镜像预演)
 2. **真实 Radish 联调按用户要求延期。** 未来实际 issuer、独立客户端、HTTPS 回调和测试身份具备对应授权后，与部署环境一起验证准入、绑定、禁用、本站退出和密钥轮换。配置未就绪时继续不依赖它的 P4 本地工作，不把合成发行方通过当作真实联通。物理断电与跨物理设备仍未验证。
 3. **P1 / P2 真实使用环境验收继续延后。** 用户有时间或开发稳定后，再补手机真机的存储、图片、ZIP 下载回导，以及[公众号验收](../deployment/wechat-acceptance.md)的粘贴、保存重开、手机明暗、行高、公式和解包后手工插图。桌面证据不替代这些结果，本地图片自动转存仍不承诺。
 
