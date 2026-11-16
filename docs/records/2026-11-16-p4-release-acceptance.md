@@ -23,3 +23,9 @@
 | 恢复后的登录与隔离 | 部署 ID 和属主内部 ID 保留，工作区 epoch 轮换。原浏览器会话查询和写入返回 401，旧 CSRF 搭配新 Cookie 写入返回 403，另一账号读取该稿件返回 404。原作者重新登录后，稿件快照、原图字节和图片预览一致，合法写入将 revision 从 3 推进到 4。                                                                 |
 
 本次证据覆盖本机原生 arm64、已发布镜像、本地账号与独立卷恢复。amd64 的实际部署、生产 HTTPS 入口、真实 Radish OIDC、手机真机和公众号继续待对应环境验收。部署方法见[固定版本 Compose](../deployment/release-compose.md)，下一项工作见[当前状态](../status/current.md#接下来的事项)。
+
+## 发布记录生成复验
+
+在临时目录分别干净检出 `dev` 的 `668ed3c` 与首发 tag 所指的 `80edec7`。用 `dev` 上的发布脚本复验首发 tag、源码 revision 和 `version.json`，并确认在 `dev` 检出中以同一旧 tag 生成记录会因 revision 不符被拒绝。通过 GHCR 重新核对两个 index、四份平台 manifest 与 config，按固定摘要运行只读基础清单采集，四份结果与首发源码的锁定计划一致。amd64 清单在本机仿真运行。Server amd64 的常规拉取停滞后，从同一 GHCR 来源分段下载，核对 manifest、config 和各层的大小及 SHA-256 后载入。两个已发布的完整镜像 tag 均返回 `reuse`。
+
+首发检出原先没有 `output/`。修复后的 `writeReleaseRecords` 自动创建父目录，生成 `release-pair.json` 和两个架构的 lock，三个文件与 Pre-release 附件逐字节一致。尝试写入已存在的输出目录时被拒绝，两份 Git 检出保持干净。`dev` 干净检出中使用项目锁定工具链执行 `pnpm test:governance`，139 项通过。下一版候选仍须在实际发布时验证 GitHub Actions 首次创建 Release。 [发布流程](../deployment/release-materials.md#主仓库发布流程)

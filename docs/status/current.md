@@ -38,7 +38,7 @@ P1 / P2 与 PWA 已进入开发预发布。P3 / P4 源码已通过 PR #5 集成�
 
 P4-1 至 P4-3 交付范围与证据见[专题地图](../planning/topics.md#子专题归属与验收入口)；下一轮按以下顺序推进，详细职责和验收条件统一见 [P4 开发顺序](../planning/self-hosted-storage.md#下一轮开发顺序)：
 
-1. **准备下一版时验证干净检出。** 用空输出目录复验发布记录与两个 lock 的生成，并在下一次候选发布确认 CI 能直接创建 Release。第三方来源和许可按实际镜像维护。[发布流程](../deployment/release-materials.md#主仓库发布流程) · [分发说明](../deployment/image-distribution.md)
+1. **在下一版候选中验证 CI 首次创建 Release。** 已用首发镜像在干净检出复验发布记录与两个 lock 的生成。下一次候选发布时确认 CI 能直接创建 Release 并附上三个文件，第三方来源和许可按实际镜像维护。[本地复验](../records/2026-11-16-p4-release-acceptance.md#发布记录生成复验) · [发布流程](../deployment/release-materials.md#主仓库发布流程) · [分发说明](../deployment/image-distribution.md)
 2. **按可用环境补部署验收。** 在获准的 amd64 测试主机或具备生产 HTTPS 入口的测试环境，按目标架构 lock 补对应链路。若常规拉取受阻，记录受影响组件、失败阶段及固定摘要的获取方式。[固定版本部署](../deployment/release-compose.md) · [部署验收](../deployment/acceptance.md)
 3. **修正已发现的远程治理偏差。** 已只读发现远端 `allow_squash_merge=true` 与仓库禁用 Squash 的规范不一致，应在获准修改远程设置后关闭并核验；PR #5 使用 merge commit，本次未修改设置。
 4. **真实 Radish 联调按用户要求延期。** 未来实际 issuer、独立客户端、HTTPS 回调和测试身份具备对应授权后，与部署环境一起验证准入、绑定、禁用、本站退出和密钥轮换。配置未就绪时继续不依赖它的 P4 本地工作，不把合成发行方通过当作真实联通。物理断电与跨物理设备仍未验证。
