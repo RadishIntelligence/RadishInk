@@ -4,7 +4,7 @@
 
 `v26.11.1.0902-test` 已通过本机隔离 arm64 Compose 验收。`v26.11.1.1601-test` 又通过本机 arm64 的生产配置 HTTPS 入口验收，覆盖安全会话、写作与 ZIP、私有 API 缓存及独立空卷恢复。 [部署验收记录](../records/2026-11-16-p4-release-acceptance.md#本机-https-配置验收)
 
-本批以本机 Docker 为部署环境。`v26.11.1.1601-test` 在原生 arm64 上已通过首页、服务端 readiness 和浏览器账号登录验收，运行入口为 `http://127.0.0.1:8080/`。 [本机部署记录](../records/2026-11-16-p4-release-acceptance.md#本机-docker-部署)
+本批以本机 Docker 为部署环境。`v26.11.1.1601-test` 在原生 arm64 上通过首页、服务端 readiness 和浏览器账号登录验收。验收后按用户要求停止并删除 `radishink-local` 的 Web 与 Server 容器，回环端口 `8080` 已释放，工作区卷与备份卷仍在。 [本机部署记录](../records/2026-11-16-p4-release-acceptance.md#本机-docker-部署)
 
 首个双镜像测试版于 11 月 10 日发布，tag 指向 `80edec7`。amd64 和 arm64 原生 CI 均通过，两份镜像的完整标签、平台摘要和三个 Release 附件均已匿名核对。[Pre-release](https://github.com/laugh0608/RadishInk/releases/tag/v26.11.1.0902-test) · [Actions](https://github.com/laugh0608/RadishInk/actions/runs/42647722683) · [首发记录](../records/2026-11-09-day-review.md#首发结果)
 
@@ -50,7 +50,7 @@ P4-1 至 P4-3 交付范围与证据见[专题地图](../planning/topics.md#子�
 
 - P3 / P4 已通过 PR #5 合入 `main` 并回流 `dev`。首发修复 `020cd73` 已由 `v26.11.1.1601-test` 的首次自动发布验证。首发 `v26.11.1.0902-test` 对应 `80edec7`，历史候选 tag 保留各自的源提交。 [首发记录](../records/2026-11-09-day-review.md#首发结果)
 - 2026-11-16 经授权通过 GitHub API 将仓库级 `allow_squash_merge` 从 `true` 改为 `false`。写入后单独回读，六项仓库设置均与模板相符。`main` Ruleset 24501729 保持 `active`，允许 merge 和 rebase，并要求 `Candidate Quality`。 [仓库设置模板](../../.github/repository-settings.json) · [main Ruleset](https://github.com/laugh0608/RadishInk/rules/24501729)
-- 既有 Vercel 集成此前报告自动预览成功，合并后的自动部署与公网页面待另行验收。镜像发布、服务端部署和跨仓库 OIDC 配置需要对应授权。
+- Vercel 的 `dev` 提交 `47a9d5a` 对应的 Production 部署已通过公网静态验收，覆盖匿名访问、浏览器保存、文章 ZIP 回导和 PWA 离线重开。镜像发布、服务端部署和跨仓库 OIDC 配置需要对应授权。 [Vercel 公网验收](../records/2026-11-16-vercel-static-acceptance.md)
 - 不迁移真实用户数据；旧文、配置、未知 frontmatter 和目录原件保留，不为升级清库、降级或静默覆盖。
 - 升级前 JSON 不含后续资源，纯 Markdown 也不含图片；浏览器逻辑包不自动写回源文件旁边，目录应备份完整文章包。
 - Docker 为自托管服务器工作区，不自动同步；通用插件、桌面启用、公共图床、官方云、计费和实时协作不在当前范围。

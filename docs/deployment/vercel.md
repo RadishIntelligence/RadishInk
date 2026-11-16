@@ -2,7 +2,7 @@
 
 本项目采用仓库根目录构建 Web 的方式。`vercel.json` 声明 Web 构建、分支过滤和内容去重配置；本地修改不等于远程已生效。
 
-当前使用已有 Vercel 项目 `laugh0608s-projects/radish-ink`（Hobby 免费计划），不新建项目。用户已绑定 `ink.radishx.com`，项目另有 `radish-ink.vercel.app`；当前验收以用户指定域名为准。2026-10-05 用户确认后，`dev` 的 `a3c45e8` 已成功部署为 Production，并接管 `ink.radishx.com`，详见 [部署证据](../records/2026-10-05-vercel-dev-deployment.md)。
+当前使用已有 Vercel 项目 `dabailuobo/radish-ink`。用户已绑定 `ink.radishx.com`，项目另有 `radish-ink.vercel.app`；当前验收以用户指定域名为准。2026-10-05 用户确认后，`dev` 的 `a3c45e8` 已成功部署为 Production，并接管 `ink.radishx.com`。最新公开部署见[当前状态](../status/current.md#当前产品与停止线)。 [首次部署证据](../records/2026-10-05-vercel-dev-deployment.md)
 
 | 设置              | 值                                           |
 | ----------------- | -------------------------------------------- |
@@ -28,7 +28,7 @@ Corepack 按 `packageManager` 选择 pnpm 9.0.2；纯 Web 安装可同时设置 
 
 | 项目     | 待确认内容                                                                                          |
 | -------- | --------------------------------------------------------------------------------------------------- |
-| 归属     | 已核对 `laugh0608s-projects`，Hobby 免费计划                                                        |
+| 归属     | 现有 `dabailuobo` 项目空间                                                                          |
 | 项目     | 已有 `radish-ink`，用户明确要求只用这一个项目                                                       |
 | 首次部署 | 分支和完整提交 SHA；本地未提交文件不会随 Git 导入部署                                               |
 | 访问域名 | 用户已绑定 `ink.radishx.com`，项目同时分配 `radish-ink.vercel.app`                                  |
