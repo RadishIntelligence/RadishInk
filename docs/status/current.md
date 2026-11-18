@@ -42,9 +42,9 @@ P4 的镜像分发、发布工作流和固定版本部署后续批次通过 PR #
 
 ## 接下来的事项
 
-P4 交付范围与证据见[专题地图](../planning/topics.md#子专题归属与验收入口)和 [P4 开发顺序](../planning/self-hosted-storage.md#下一轮开发顺序)。下一轮建议优先验证实际写作和排版流程。
+P4 交付范围与证据见[专题地图](../planning/topics.md#子专题归属与验收入口)和 [P4 开发顺序](../planning/self-hosted-storage.md#下一轮开发顺序)。11 月 18 日将本项目列为系列下一轮首个使用验收窗口，优先验证手机写作和公众号排版。窗口受限时，改排 RadishLedger 的模拟器首笔记账。
 
-1. **优先准备手机与公众号实测。** 恢复延期验收时，先用同一份[合成稿件](../deployment/wechat-acceptance-sample.md)在手机上检查保存、图片、ZIP 下载及回导，再在公众号编辑器验证粘贴、保存重开、手机明暗主题、行高、公式和解包后的手工插图。按实际复现结果确定修复优先级。 [公众号验收](../deployment/wechat-acceptance.md)
+1. **优先准备手机与公众号实测。** 恢复延期验收时，先用同一份[合成稿件](../deployment/wechat-acceptance-sample.md)在手机上检查保存、图片、ZIP 下载及回导，再在公众号编辑器验证粘贴、保存重开、手机明暗主题、行高、公式和解包后的手工插图。沿同一篇稿件记录丢失的内容、需要返工的步骤及作者最难接受的一处操作。全程能保存重开并得到预期版式即收口；有问题就先修影响最大且可复现的一处，再用原稿回归。手机或公众号窗口暂缺时标明待验环节，保留已完成的部署结果。 [公众号验收](../deployment/wechat-acceptance.md)
 2. **外部部署按需补验。** 本机 Docker 部署、两版已发布镜像之间的原卷升级及升级前备份独立恢复已验收。后续如需覆盖原生 amd64 主机或公开信任证书的外部 HTTPS 入口，按目标架构 lock 在对应获准环境补验。 [本机部署记录](../records/2026-11-16-p4-release-acceptance.md#本机-docker-部署) · [版本升级](../records/2026-11-16-p4-release-acceptance.md#已发布版本原卷升级) · [amd64 预演](../records/2026-11-16-p4-release-acceptance.md#本机-amd64-镜像预演)
 3. **真实 Radish 联调按用户要求延期。** 实际 issuer、独立客户端、HTTPS 回调和测试身份具备对应授权后，与部署环境一起验证准入、绑定、禁用、本站退出和密钥轮换。 [OIDC 操作说明](../development/server-oidc.md)
 
