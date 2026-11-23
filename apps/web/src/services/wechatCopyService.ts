@@ -11,7 +11,10 @@ import {
 import toast from "react-hot-toast";
 import { processHtml, createMarkdownParser } from "@wemd/core";
 import katexCss from "katex/dist/katex.min.css?inline";
-import { convertLinksToFootnotes } from "../utils/linkFootnote";
+import {
+  convertLinksToFootnotes,
+  referenceHeadingCss,
+} from "../utils/linkFootnote";
 import { sanitizeRenderedHtml } from "../utils/sanitizeRenderedHtml";
 import { getPublishingPreference } from "../store/publishingPreferences";
 import {
@@ -262,15 +265,19 @@ export async function copyToWechat(
   document.body.appendChild(container);
 
   try {
+    const linkToFootnote = getPublishingPreference("linkToFootnote");
     const parser = createMarkdownParser({
       mathRenderer: "katex",
       showMacBar: options.showMacBar === true,
+      collectReferenceLinks: linkToFootnote,
     });
     const rawHtml = parser.render(markdown);
     assertCopyableImages(rawHtml);
-    const themedCss = buildCopyCss(css);
+    const themedCss = buildCopyCss(
+      linkToFootnote ? referenceHeadingCss + "\n" + css : css,
+    );
     const sanitizedCss = stripCounterPseudoRules(themedCss);
-    const sourceHtml = getPublishingPreference("linkToFootnote")
+    const sourceHtml = linkToFootnote
       ? convertLinksToFootnotes(rawHtml)
       : rawHtml;
     const materializedHtml = materializeCounterPseudoContent(

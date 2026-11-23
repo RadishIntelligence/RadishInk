@@ -40,6 +40,8 @@ export interface MarkdownParserOptions {
   showMacBar?: boolean;
   mathRenderer?: "auto" | "katex";
   includeSourcePosition?: boolean;
+  /** 保留标准链接及其标题，交由公众号排版统一生成文末参考资料。 */
+  collectReferenceLinks?: boolean;
 }
 
 const MAC_CODE_DOTS = ["rgb(237,108,96)", "rgb(247,193,81)", "rgb(100,200,86)"]
@@ -56,6 +58,7 @@ export const createMarkdownParser = (options: MarkdownParserOptions = {}) => {
   const showMacBar = options.showMacBar === true;
   const markdownParser: MarkdownIt = new MarkdownIt({
     html: true,
+    linkify: options.collectReferenceLinks === true,
     highlight: (str: string, lang: string): string => {
       // Mermaid 图表：输出 pre.mermaid 让前端渲染
       if (lang === "mermaid") {
@@ -102,8 +105,15 @@ export const createMarkdownParser = (options: MarkdownParserOptions = {}) => {
     .use(markdownItTableContainer)
     .use(markdownItMath, {
       renderer: options.mathRenderer ?? "auto",
-    })
-    .use(markdownItLinkfoot)
+    });
+
+  if (options.collectReferenceLinks) {
+    markdownParser.linkify.set({ fuzzyLink: false, fuzzyEmail: false });
+  } else {
+    markdownParser.use(markdownItLinkfoot);
+  }
+
+  markdownParser
     .use(markdownItTableOfContents, {
       transformLink: () => "",
       includeLevel: [2, 3],

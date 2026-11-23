@@ -26,7 +26,7 @@ describe("Toolbar 表格自动换行开关", () => {
     );
 
     const footnoteButton = screen.getByRole("button", {
-      name: "外链转脚注：关闭",
+      name: "外链转脚注：开启",
     });
     const tableWrapButton = screen.getByRole("button", {
       name: "表格自动换行：关闭",

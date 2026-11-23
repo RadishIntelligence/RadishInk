@@ -25,10 +25,11 @@ const PREFERENCES = {
   }
 >;
 
-const currentValues: Record<PublishingPreferenceKey, boolean> = {
-  linkToFootnote: false,
+const defaults: Record<PublishingPreferenceKey, boolean> = {
+  linkToFootnote: true,
   tableWrap: false,
 };
+const currentValues = { ...defaults };
 
 const serverListeners: Record<
   PublishingPreferenceKey,
@@ -46,8 +47,9 @@ export function getPublishingPreference(
       PREFERENCES[preference].storageKey,
     );
     if (saved === "true" || saved === "false") {
-      currentValues[preference] = saved === "true";
+      return saved === "true";
     }
+    return defaults[preference];
   }
   return currentValues[preference];
 }
@@ -57,9 +59,8 @@ export function setPublishingPreference(
   enabled: boolean,
 ): void {
   const config = PREFERENCES[preference];
-  currentValues[preference] = enabled;
-
   if (typeof window === "undefined") {
+    currentValues[preference] = enabled;
     serverListeners[preference].forEach((listener) => listener(enabled));
     return;
   }

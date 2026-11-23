@@ -200,6 +200,9 @@ describe("公众号背景文章综合元素复制", () => {
   });
 
   it("在同一根背景画布中保留全部关键元素及其兼容转换", async () => {
+    vi.mocked(window.localStorage.getItem).mockImplementation((key) =>
+      key === "wemd-link-to-footnote" ? "false" : null,
+    );
     await copyToWechat(MARKDOWN, CSS, { showMacBar: true });
 
     expect(mocked.clipboardWrite).toHaveBeenCalledTimes(1);

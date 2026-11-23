@@ -463,6 +463,7 @@ describe("wechatCopyService clipboard strategy", () => {
     );
 
     expect(mocked.createMarkdownParserMock).toHaveBeenCalledWith({
+      collectReferenceLinks: false,
       mathRenderer: "katex",
       showMacBar: true,
     });

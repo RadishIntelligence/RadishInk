@@ -1,38 +1,114 @@
-/**
- * 将外部链接转换为脚注引用
- * 微信内部链接（mp.weixin.qq.com）不转换
- */
-export function convertLinksToFootnotes(html: string): string {
-  const links: { text: string; url: string }[] = [];
-  let counter = 1;
+// 主题可以通过原有的 .footnotes-sep:before 自定义标题。
+export const referenceHeadingCss =
+  '.reference-heading:before { content: "参考资料"; }';
 
-  // 匹配 <a href="url">text</a>，提取 href 和文本内容
-  const result = html.replace(
-    /<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi,
-    (match, url, text) => {
-      // 跳过微信内部链接
-      if (url.includes("mp.weixin.qq.com")) return match;
-      // 跳过锚点链接
-      if (url.startsWith("#")) return match;
-      // 跳过空链接
-      if (!url || url === "url") return text;
-
-      const cleanedText = text.trim() || url;
-      links.push({ text: cleanedText, url });
-      return `<span class="footnote-word">${cleanedText}</span><sup class="footnote-ref">[${counter++}]</sup>`;
-    },
+// 文末手写的独立网址已可直接复制，保留作者的条目顺序和说明。
+function getBibliographyHeading(root: DocumentFragment): Element | undefined {
+  const headings = Array.from(root.children).filter((el) =>
+    /^H[1-6]$/.test(el.tagName),
   );
+  const last = headings.at(-1);
+  return last &&
+    /^(参考资料|参考文献|参考链接|References)$/i.test(
+      (last.textContent ?? "").trim(),
+    )
+    ? last
+    : undefined;
+}
 
-  // 如果有外链，在末尾添加脚注列表
-  if (links.length > 0) {
-    const footnoteItems = links
-      .map(
-        (l, i) =>
-          `<div class="footnote-item"><span class="footnote-num">[${i + 1}] </span><p>${l.text}<br/>${l.url}</p></div>`,
-      )
-      .join("");
-    return `${result}<h3 class="footnotes-sep"></h3>\n<section class="footnotes">\n${footnoteItems}\n</section>`;
+function webAddress(anchor: Element): string | undefined {
+  const href = anchor.getAttribute("href")?.trim() ?? "";
+  if (href.startsWith("//")) return "https:" + href;
+  return /^https?:\/\//i.test(href) ? href : undefined;
+}
+
+export function convertLinksToFootnotes(html: string): string {
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  const root = template.content;
+  const anchors = Array.from(root.querySelectorAll("a[href]"));
+  if (!anchors.length) return html;
+
+  const heading = getBibliographyHeading(root);
+  const existing = new Set<string>();
+  if (heading) {
+    for (const anchor of anchors) {
+      const url = webAddress(anchor);
+      const p = anchor.parentElement;
+      if (
+        url &&
+        p?.tagName === "P" &&
+        p.textContent?.trim() === url &&
+        anchor.textContent?.trim() === url &&
+        heading.compareDocumentPosition(p) & Node.DOCUMENT_POSITION_FOLLOWING
+      ) {
+        existing.add(url);
+        anchor.replaceWith(url);
+      }
+    }
   }
 
-  return result;
+  const notes = new Map<string, { number: number; label: string }>();
+  for (const anchor of anchors) {
+    const url = webAddress(anchor);
+    if (!url || !anchor.parentNode || anchor.closest("pre, code")) continue;
+    const word = document.createElement("span");
+    for (const { name, value } of anchor.attributes) {
+      if (
+        ["class", "id", "style", "lang", "dir"].includes(name) ||
+        name.startsWith("data-")
+      ) {
+        word.setAttribute(name, value);
+      }
+    }
+    word.classList.add("footnote-word");
+    const label =
+      anchor.getAttribute("title") ||
+      anchor.textContent?.trim() ||
+      anchor.querySelector("img")?.alt ||
+      "";
+    word.append(...Array.from(anchor.childNodes));
+    anchor.replaceWith(word);
+    if (existing.has(url)) continue;
+
+    let note = notes.get(url);
+    if (!note) {
+      note = { number: notes.size + 1, label: label === url ? "" : label };
+      notes.set(url, note);
+    }
+    const marker = document.createElement("sup");
+    marker.className = "footnote-ref";
+    marker.textContent = "[" + note.number + "]";
+    word.after(marker);
+  }
+
+  if (notes.size) {
+    if (!heading) {
+      const title = document.createElement("h3");
+      title.className = "footnotes-sep reference-heading";
+      root.append(title);
+    }
+    const footer = document.createElement("section");
+    footer.className = "footnotes";
+    for (const [url, note] of notes) {
+      const item = document.createElement("div");
+      item.className = "footnote-item";
+      item.style.flexDirection = "column";
+      const label = document.createElement("p");
+      const number = document.createElement("span");
+      number.className = "footnote-num";
+      number.textContent = `[${note.number}]`;
+      label.append(number);
+      if (note.label) label.append(" " + note.label);
+      const address = document.createElement("p");
+      address.style.display = "block";
+      address.style.overflowWrap = "anywhere";
+      address.style.wordBreak = "break-all";
+      address.textContent = url;
+      item.append(label, address);
+      footer.append(item);
+    }
+    root.append(footer);
+  }
+  return template.innerHTML;
 }
