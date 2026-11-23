@@ -1,16 +1,18 @@
 import { assertAssetPath } from "../storage/articles/articleContract";
 import { resolveAppAssetPath } from "./assetPath";
 
+const appImageSources = new Set(
+  ["images/writing.svg", "images/mac-sign.svg", "pwa/icon-192.png"].flatMap(
+    (path) => [resolveAppAssetPath(path), `/${path}`, `./${path}`],
+  ),
+);
+
 export function isArticleImageSource(source: string): boolean {
-  const appImages = ["writing.svg", "mac-sign.svg"];
-  const isAppImage = appImages.some((name) =>
-    [
-      resolveAppAssetPath(`images/${name}`),
-      `/images/${name}`,
-      `./images/${name}`,
-    ].includes(source),
+  return (
+    !!source &&
+    !appImageSources.has(source) &&
+    !/^(?:https?:|data:|\/\/)/i.test(source)
   );
-  return !!source && !isAppImage && !/^(?:https?:|data:|\/\/)/i.test(source);
 }
 
 /** Markdown 解析器会编码中文和空格；只解码一次，随后仍按文章资源契约验证。 */

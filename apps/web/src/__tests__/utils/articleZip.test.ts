@@ -190,6 +190,11 @@ describe("文章 ZIP 的边界与可回读性", () => {
       ),
     ).toThrow(/CSS/);
   });
+  it("公众号样例的站点 PNG 保留为外部引用", () => {
+    expect(inspectPackageReferences("![图标](/pwa/icon-192.png)", [])).toEqual({
+      external: true,
+    });
+  });
   it("CRC 标准向量", () =>
     expect(crc32(strToU8("123456789"))).toBe(0xcbf43926));
   it("Markdown、HTML 图片和本地附件都检查，外链提示、代码块不误报", () => {

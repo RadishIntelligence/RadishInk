@@ -194,14 +194,20 @@ describe("图片预览与复制边界", () => {
   });
   it("内置示例图兼容生产相对基础路径，不放行任意相对图片", () => {
     const result = resolveArticleImages(
-      '<img src="./images/writing.svg"><img src="/images/mac-sign.svg"><img src="./images/private.png">',
+      '<img src="./images/writing.svg"><img src="/images/mac-sign.svg"><img src="/pwa/icon-192.png"><img src="./images/private.png"><img src="/pwa/private.png">',
       new Map(),
     );
     expect(result.html).toContain('src="./images/writing.svg"');
     expect(result.html).toContain('src="/images/mac-sign.svg"');
-    expect(result.missing).toEqual(["./images/private.png"]);
+    expect(result.html).toContain('src="/pwa/icon-192.png"');
+    expect(result.missing).toEqual([
+      "./images/private.png",
+      "/pwa/private.png",
+    ]);
     expect(() =>
-      assertCopyableImages('<img src="./images/writing.svg">'),
+      assertCopyableImages(
+        '<img src="./images/writing.svg"><img src="./pwa/icon-192.png">',
+      ),
     ).not.toThrow();
   });
   it("未验证本地图片转存前阻止两类复制假成功，外链和应用装饰图正常", () => {
