@@ -107,6 +107,30 @@ describe("图片限额与内容验证", () => {
   });
 });
 describe("异步图片插入归属和锚点", () => {
+  it("拖入以落点为锚，保存期间继续编辑也不会覆盖原选区", async () => {
+    let finish!: () => void;
+    const append = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const { controller, view, target } = editor(append);
+    controller.cancel();
+    view.dispatch({ selection: { anchor: 1, head: 3 } });
+    controller.begin(target, 5);
+    const task = controller.insert([image()], "input.drop");
+    await vi.waitFor(() => expect(append).toHaveBeenCalledOnce());
+    expect(view.state.doc.toString()).toBe("abcdef");
+    view.dispatch({ changes: { from: 0, insert: "前" } });
+    finish();
+    await task;
+    expect(view.state.doc.toString()).toMatch(
+      /^前abcde!\[图片\]\(asset\/image-.+\.png\)f$/,
+    );
+    const { from, to } = view.state.selection.main;
+    expect(view.state.sliceDoc(from, to)).toBe("bc");
+  });
   it("提交完成前不插入，继续输入移动锚点且不丢新输入", async () => {
     let finish!: () => void;
     const append = vi.fn(
