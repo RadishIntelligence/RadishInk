@@ -4,11 +4,13 @@ RadishInk（萝卜墨笺）是基于 WeMD 的 Markdown 写作与微信公众号�
 
 ## 当前已实现范围
 
-使用浏览器完成 Markdown 编辑、主题预览、本地草稿和公众号富文本复制。已有工作区文件读写继续维护；Web Markdown 单文件导入导出已在 `4343524` 实现，支持最新正文与元数据往返，验证边界见 [实现记录](records/2026-10-06-markdown-file-import-export.md)。Web 静态产物可以部署到 Vercel；P4-1 已提供 [Compose 双服务本地构建与初始化](deployment/compose.md)，P4-2 已提供[离线备份恢复](deployment/backup-restore.md)。此前 P4 代码候选的本地双架构主要部署矩阵与原生 CI 已通过；镜像材料与构建门禁见 [分发说明](deployment/image-distribution.md)，固定版本与受控编排见 [操作说明](deployment/release-compose.md)，双镜像发布与成对记录见[发布材料](deployment/release-materials.md)。测试版的发布与部署进度见[当前状态](status/current.md)。
+使用浏览器完成 Markdown 编辑、主题预览、本地草稿和公众号富文本复制。已有工作区文件读写继续维护；Web Markdown 单文件导入导出已在 `4343524` 实现，支持最新正文与元数据往返，验证边界见 [实现记录](records/2026-10-06-markdown-file-import-export.md)。Web 静态产物可以部署到 Vercel；P4-1 已提供 [Compose 双服务本地构建与初始化](deployment/compose.md)，P4-2 已提供[离线备份恢复](deployment/backup-restore.md)。此前 P4 代码候选的本地双架构主要部署矩阵与原生 CI 已通过；镜像材料与构建门禁见 [分发说明](deployment/image-distribution.md)，固定版本与受控编排见 [操作说明](deployment/release-compose.md)，双镜像发布与成对记录见[发布材料](deployment/release-materials.md)。各版本的发布与部署进度见[当前状态](status/current.md)。
 
 P1 已在本地移除 Web 图床 / AI 的入口、挂载和请求实现，旧配置保留为未启用数据；文件操作集中到顶栏 / 浮动栏的“文件”菜单与移动端“更多功能”，编辑工具按容器宽度渐进收纳。粘贴、选择或拖入的图片由当前文章保存，已有外链图片继续可读。行为契约见 [界面专题](planning/editor-interface.md)，当时的实现与验证范围见 [P1 实现记录](records/2026-10-14-editor-interface-p1.md)。
 
 P2a 已在本地接入浏览器备份升级与实际文章读写，目录新建 / 导入形成文章包，并提供恢复、冲突副本、整包移动 / 删除及旧 JSON 缺失文章恢复。图片粘贴 / 选择、两种存储持久化与预览已本地接入，系统目录授权 / 撤权及标签重开已有真实验收；专用浏览器完整进程重启、真实目录移动 / 冲突副本已补测，权限边界见最新记录。具体行为见 [存储契约](development/article-storage-contract.md)，提交与验证状态见 [当前状态](status/current.md)。
+
+公众号预览与复制共用外链转脚注偏好，默认开启。正文保留引用编号，同一网址合并，文末把完整网址放在独立段落。已有手动关闭的选择继续生效。块级公式可用独立的 `$$` 公式块。桌面粘贴和手机复验分别记录。[公众号稿件的参考资料](deployment/wechat-acceptance.md#公众号稿件的参考资料)
 
 ## 已确认的演进方向
 

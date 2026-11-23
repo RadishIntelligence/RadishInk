@@ -2,7 +2,7 @@
 
 **专注写作，轻松排版。** 基于 [WeMD](https://github.com/tenngoxars/WeMD) 二次开发的 Markdown 写作与微信公众号排版工具。
 
-当前提供 Markdown 编辑、主题预览、公众号富文本复制，以及浏览器 / 本地文件夹两种文章工作区。支持 Markdown 单文件进出、正文与本地图片组成的文章包、ZIP 下载与回导、旧数据备份恢复和 PWA 保存后安全更新；Web 图床上传与 AI 功能已移除。`v26.10.2-dev` 为开发预发布，手机真机与真实公众号整体验收按用户安排延后，不代表完整发布验收通过。版本范围见 [发布记录](docs/records/2026-10-25-v26.10.2-dev.md)，远程状态及后续开发见 [当前状态](docs/status/current.md)。
+浏览器可直接编辑 Markdown、预览主题和复制公众号富文本。图片可以粘贴、选择或拖到正文指定位置，随文章一起导出 ZIP 并重新导入。公众号排版默认在文末逐条列出可复制的完整网址，保留已有偏好。含本地插图的稿件目前需从文章包取出原图，在公众号编辑器手工插入。[公众号验收记录](docs/records/2026-11-23-mobile-wechat-acceptance.md) · [当前状态](docs/status/current.md)
 
 ## 开发
 
@@ -31,7 +31,7 @@ P3-3 服务器 Web 工作区已在本地实现并通过浏览器验证，提供�
 - [贡献指南](CONTRIBUTING.md) · [文档索引](docs/README.md) · [仓库治理](docs/governance/repository-governance.md)
 - [Vercel 部署配置](docs/deployment/vercel.md) · [GitHub Rulesets 模板](.github/rulesets/README.md)
 
-Vercel 从仓库根构建 `apps/web/dist`，当前站点为 [ink.radishx.com](https://ink.radishx.com)，实际部署提交与验证边界见 [部署说明](docs/deployment/vercel.md)。上游 Docker / 桌面发布工作流已暂停；Compose 已提供本地构建的前后端服务与持久卷，初始化和同源配置见 [Compose 说明](docs/deployment/compose.md)；本地构建不代表镜像已发布；[离线备份恢复](docs/deployment/backup-restore.md) 与 [显式共享 / 归属转换](docs/deployment/shared-workspace.md) 已实现。本地双架构主要验收矩阵与原生远程 CI 已通过，范围见 [P4-4 记录](docs/records/2026-10-29-deployment-p4-4.md)；[固定版本维护](docs/deployment/release-compose.md)与[源码伴随包 / 成对记录工具](docs/deployment/release-materials.md)已本地验证，完整基础源码收集、新增门禁的远程 CI、正式分发与真实环境仍待验，实际进度见[当前状态](docs/status/current.md)。尚未发布镜像或部署服务端。
+静态写作站点为 [ink.radishx.com](https://ink.radishx.com)。自托管可使用同一版本的 Web 与 Server 镜像，按架构从 Release 获取部署锁文件。正式版轨道为两个组件同时提供固定版本、`release-latest` 和 `latest` 标签。安装与回退使用对应版本的锁文件。[发布版本与附件](https://github.com/laugh0608/RadishInk/releases) · [固定版本部署](docs/deployment/release-compose.md) · [离线备份与恢复](docs/deployment/backup-restore.md)
 
 浏览器模式的草稿保存在当前站点的浏览器本地；当前部署不提供账号或跨设备同步。当前 Web 代码不再提供图床上传与 AI，旧配置保留但不启用；应用代码不加载统计脚本。当前请求与旧配置行为见 [Web 品牌与外部服务](docs/development/web-brand-and-services.md)。当前构建的依赖分发声明已复核，后续发布仍须按实际产物复核；真实公众号整体验收仍未完成。
 

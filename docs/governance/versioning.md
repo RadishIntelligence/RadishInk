@@ -58,9 +58,9 @@ mise exec -- pnpm check:release-tag --tag v26.10.1.0501-test
 
 [docker-compose.yml](../../docker-compose.yml) 从本仓库构建 `web` + `server`，本地项目镜像名不代表发布版本，入口见 [Compose 说明](../deployment/compose.md)。独立的[固定版本 Compose](../deployment/release-compose.md)必须使用已实际发布的完整 tag 与对应平台 digest，并核对双镜像 OCI 来源 / revision；不默认拉取上游或 `latest`。本地合成元数据标签不是发布版本，生产不能使用占位 lock。首次实际发布及部署按对应授权执行。
 
-## 首次发布前的准备
+## 候选与正式版发布准备
 
-本节用于准备后续候选和首个正式 `release` 轨道版本。`test` 轨道已经完成双镜像分发，正式 `release` 轨道待后续安排。RadishInk 使用根 `version.json` 作为产品版本来源。
+测试候选和正式版均由主仓库的 tag 发布流程交付。发版前在根 `version.json` 设置三段产品版本及对应轨道，先经 PR 合入稳定主线，再在已核验的目标提交上创建正式版 tag。
 
 发起新候选时执行以下步骤。
 

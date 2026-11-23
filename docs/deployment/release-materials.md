@@ -1,6 +1,6 @@
 # 双镜像发布记录与源码材料
 
-本文接续[镜像分发材料](image-distribution.md)与[固定版本部署](release-compose.md)。[主仓库发布工作流](../../.github/workflows/publish.yml)的本地改动待审阅，实际进度见[当前状态](../status/current.md)。`RELEASE_TAG` 代表与目标提交 `version.json` 一致的新 `test` 或 `release` 轨道 tag。
+本文接续[镜像分发材料](image-distribution.md)与[固定版本部署](release-compose.md)。[主仓库发布工作流](../../.github/workflows/publish.yml)按 Git tag 生成两个架构的部署锁文件和成对镜像记录，实际发布记录见[当前状态](../status/current.md)。`RELEASE_TAG` 代表与目标提交 `version.json` 一致的新 `test` 或 `release` 轨道 tag。
 
 ## 基础系统的源码提供方式
 
