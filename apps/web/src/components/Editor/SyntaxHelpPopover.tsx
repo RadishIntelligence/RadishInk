@@ -12,6 +12,7 @@ const syntaxItems = [
   { syntax: "~~文字~~", desc: "删除线" },
   { syntax: "==文字==", desc: "高亮" },
   { syntax: "$公式$", desc: "行内公式" },
+  { syntax: "$$公式$$", desc: "独占一行的公式" },
   { syntax: "`代码`", desc: "行内代码" },
   { syntax: "H~2~O", desc: "下标" },
   { syntax: "X^2^", desc: "上标" },

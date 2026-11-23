@@ -6,7 +6,10 @@ import { useThemeStore } from "../../store/themeStore";
 import { useUITheme } from "../../hooks/useUITheme";
 // 公式由 packages/core 的 markdown-it-math 在解析期完成渲染，这里只需要样式
 import "katex/dist/katex.min.css";
-import { convertLinksToFootnotes } from "../../utils/linkFootnote";
+import {
+  convertLinksToFootnotes,
+  referenceHeadingCss,
+} from "../../utils/linkFootnote";
 import { sanitizeRenderedHtml } from "../../utils/sanitizeRenderedHtml";
 import {
   getPublishingPreference,
@@ -134,8 +137,9 @@ export function MarkdownPreview({
         showMacBar,
         mathRenderer: useMathJaxForPreview && mathJaxReady ? "auto" : "katex",
         includeSourcePosition: true,
+        collectReferenceLinks: linkToFootnoteEnabled,
       }),
-    [showMacBar, useMathJaxForPreview, mathJaxReady],
+    [showMacBar, useMathJaxForPreview, mathJaxReady, linkToFootnoteEnabled],
   );
 
   useEffect(() => {
@@ -375,7 +379,7 @@ export function MarkdownPreview({
         <div className="preview-content">
           <style
             dangerouslySetInnerHTML={{
-              __html: getThemeCSS(theme, uiTheme === "dark"),
+              __html: `${referenceHeadingCss}\n${getThemeCSS(theme, uiTheme === "dark")}`,
             }}
           />
           <div ref={previewRef} dangerouslySetInnerHTML={{ __html: html }} />

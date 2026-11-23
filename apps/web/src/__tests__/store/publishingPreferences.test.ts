@@ -22,6 +22,13 @@ describe("发布偏好", () => {
     vi.unstubAllGlobals();
   });
 
+  it("默认在文末列网址并尊重已保存的关闭选择", () => {
+    expect(getPublishingPreference("linkToFootnote")).toBe(true);
+    localStorage.setItem("wemd-link-to-footnote", "false");
+    expect(getPublishingPreference("linkToFootnote")).toBe(false);
+    expect(getPublishingPreference("tableWrap")).toBe(false);
+  });
+
   it("通过同一接口持久化并发布不同偏好", () => {
     const linkListener = vi.fn();
     const tableListener = vi.fn();

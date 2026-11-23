@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { EditorView, minimalSetup } from "codemirror";
+import { dropCursor } from "@codemirror/view";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { EditorState } from "@codemirror/state";
@@ -39,6 +40,10 @@ interface MarkdownEditorProps {
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max);
 
+// 部分系统拖出的文件缺少 MIME；格式和原字节仍由图片写入流程校验。
+const isDroppedImage = (file: File) =>
+  file.type.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
+
 export function MarkdownEditor({ onScrollSyncReady }: MarkdownEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -60,11 +65,12 @@ export function MarkdownEditor({ onScrollSyncReady }: MarkdownEditorProps) {
     input?.addEventListener("cancel", cancel);
     return () => input?.removeEventListener("cancel", cancel);
   }, []);
-  const beginImages = () => {
+  const beginImages = (dropPosition?: number) => {
     try {
       if (!workspaceRef.current)
         throw new Error("文章图片保存功能尚未提供：当前未启用文章存储");
-      insertion.current?.begin(workspaceRef.current.capture());
+      if (!insertion.current) throw new Error("请等待编辑器就绪后再插入图片");
+      insertion.current.begin(workspaceRef.current.capture(), dropPosition);
       return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
@@ -94,6 +100,7 @@ export function MarkdownEditor({ onScrollSyncReady }: MarkdownEditorProps) {
       doc: currentContent,
       extensions: [
         minimalSetup,
+        dropCursor(),
         customKeymap,
         markdown({
           base: markdownLanguage,
@@ -122,19 +129,21 @@ export function MarkdownEditor({ onScrollSyncReady }: MarkdownEditorProps) {
             }
             return false;
           },
-          drop: (event) => {
-            if (
-              Array.from(event.dataTransfer?.files ?? []).some((file) =>
-                file.type.startsWith("image/"),
-              )
-            ) {
-              event.preventDefault();
-              toast.error(
-                "拖入图片尚未开放，请使用粘贴或“选择图片”保存到文章。",
-              );
-              return true;
-            }
-            return false;
+          dragover: (event) => {
+            if (!event.dataTransfer?.types.includes("Files")) return false;
+            event.dataTransfer.dropEffect = "copy";
+            return true;
+          },
+          drop: (event, view) => {
+            const files = Array.from(event.dataTransfer?.files ?? []);
+            if (!files.some(isDroppedImage)) return false;
+            const position = view.posAtCoords(
+              { x: event.clientX, y: event.clientY },
+              false,
+            );
+            if (beginImages(position))
+              void insertion.current?.insert(files, "input.drop");
+            return true;
           },
         }),
         EditorView.updateListener.of((update) => {

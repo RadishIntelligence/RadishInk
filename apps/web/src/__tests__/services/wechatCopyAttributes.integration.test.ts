@@ -84,6 +84,37 @@ describe("公众号复制属性语法", () => {
     expect(payload.html).not.toContain("data-wemd-source-");
   });
 
+  it("把带标题、引用式和重复链接汇入文末静态网址段落", async () => {
+    const paper = "https://example.org/paper.pdf?lang=en&v=2#page=41";
+    const otherPage = paper.replace("#page=41", "#page=9");
+    const official = "https://mp.weixin.qq.com/s/example";
+    const markdown = [
+      `参见[**文献甲**](${paper} "实验数据")、[复引][same]以及[另一页](${otherPage})。`,
+      `原文 <${official}>。`,
+      `[same]: ${paper}`,
+    ].join("\n\n");
+    await copyToWechat(markdown, "");
+    const { html, text } = mocked.electronClipboardWrite.mock.calls[0][0];
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    expect(doc.querySelector("a[href]")).toBeNull();
+    expect(doc.querySelector("strong")?.textContent).toBe("文献甲");
+    expect(
+      [...doc.querySelectorAll("sup")].map((el) => el.textContent),
+    ).toEqual(["[1]", "[1]", "[2]", "[3]"]);
+    expect(doc.querySelector("h3")?.textContent).toBe("参考资料");
+    expect(
+      [...doc.querySelectorAll(".footnotes p")].map((el) => el.textContent),
+    ).toEqual([
+      "[1] 实验数据",
+      paper,
+      "[2] 另一页",
+      otherPage,
+      "[3]",
+      official,
+    ]);
+    expect(text).toContain(paper);
+  });
+
   it("为图片、链接和行内格式内联局部样式", async () => {
     await copyToWechat(
       "![封面](https://example.com/cover.png){.hero-image #cover}\n\n[查看详情](https://example.com){.cta-link}\n\n这是 **重点内容**{.inline-highlight}。",
@@ -100,7 +131,10 @@ describe("公众号复制属性语法", () => {
     expect(payload.html).toContain('class="hero-image"');
     expect(payload.html).toContain('id="cover"');
     expect(payload.html).toContain("border-radius: 12px");
-    expect(payload.html).toContain('class="cta-link"');
+    const doc = new DOMParser().parseFromString(payload.html, "text/html");
+    expect(doc.querySelector(".cta-link.footnote-word")?.textContent).toBe(
+      "查看详情",
+    );
     expect(payload.html).toContain("color: rgb(0, 90, 180)");
     expect(payload.html).toContain('class="inline-highlight"');
     expect(payload.html).toContain("background-color: rgb(255, 230, 120)");

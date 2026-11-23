@@ -69,3 +69,17 @@ Web 通过 `docker pull` 获取 `sha256:0121c85da0404ca1ec36106e2694aec49cbb67f5
 本批使用本机 Docker 作为部署环境。OrbStack 的原生 `linux/arm64` 使用 `v26.11.1.1601-test` 的 arm64 lock，两份镜像按完整 tag 和平台摘要获得。Compose 项目名 `radishink-local`，入口为 `http://127.0.0.1:8080/`，使用回环 HTTP、`RADISHINK_ENV=development` 与本地账号模式。工作区、备份分别存放在独立的 `radishink-local-workspace` 和 `radishink-local-backups` 命名卷。维护用 lock、公开配置和部署记录在仓库忽略目录 `.tmp/radishink-local/`，该目录由本机账号独占。
 
 用交互式 `account-cli init-admin` 创建本地管理员。`deploy:release preflight` 和 `apply --no-pull` 均通过，初始化备份的独立恢复复核通过，Web 和 Server 均为 `healthy`。Web 首页为 HTTP 200，同源服务端返回 `ready`。Chromium 实测管理员登录、进入服务器工作区和退出。部署实例保留运行。停机时先执行 `docker stop radishink-local-web-1`，再执行 `docker stop radishink-local-server-1`，保留两个命名卷。 [固定版本维护](../deployment/release-compose.md)
+
+## 阶段主线集成
+
+[PR #6](https://github.com/laugh0608/RadishInk/pull/6) 将 `dev` 的 `80cb9232d0bc357f5a2f21a3017ee3aa17c7ba0b` 集成到以 `ddd838a0bbb235738e926bf08e094d85f210609a` 为基线的 `main`。该 PR 的远程 `PR Checks` 首次运行成功，`Repo Hygiene`、`Web Quality`、Linux amd64 / arm64 的 `Server Quality` 和必需的 `Candidate Quality` 均通过。 [远程运行](https://github.com/laugh0608/RadishInk/actions/runs/43880512760) · [Candidate Quality](https://github.com/laugh0608/RadishInk/actions/runs/43880512760/job/133347552561)
+
+北京时间 22:01:28 用 merge commit `6c415087836570d18b29a1df8cf201e25ac74e6d` 合入 `main`。核对其两个父提交分别为原 `main` 和 PR head，合并树与 PR head 一致。随后将 `dev` 快进到该合并提交并推送。回流完成时，本地与远端的 `main`、`dev` 均回读为 `6c41508`，工作区和暂存区干净。 [合并提交](https://github.com/laugh0608/RadishInk/commit/6c415087836570d18b29a1df8cf201e25ac74e6d)
+
+## 已发布版本原卷升级
+
+在本机原生 arm64 OrbStack 的临时 Compose 项目中，按 GitHub Release 附件 SHA-256 核对 `v26.11.1.0902-test`、`v26.11.1.1601-test` 的 arm64 lock，四份镜像均命中本地固定摘要。用 `deploy:release preflight` 与 `apply --no-pull` 在回环 `4292`、子路径 `/nested/` 初始化首发版。通过同源 API 登录两个合成账号，保存一篇稿件及 PNG，核对原图和账号隔离。
+
+以新版 lock 在同一工作区卷上运行预检和停写编排。升级前备份有 5 个文件、127769 字节，内置独立恢复复核通过。两版均使用 schema 3。回读容器确认 Web、Server 切到新版固定摘要并达到 `healthy`，同源接口返回 `ready`。部署 ID、epoch、原登录会话、属主、稿件和原图保留，另一账号读取仍返回 404。升级后合法保存推进稿件 revision。
+
+停写后把升级前备份恢复到独立空卷，再用首发版固定镜像启动该恢复卷。恢复得到升级前的稿件快照、属主和原图，部署 ID 保留、epoch 轮换。旧 Cookie 查询会话返回 401，旧 CSRF 搭配新 Cookie 写入返回 403，重新登录后合法保存通过。临时容器、卷、端口和测试目录均已清理。 [固定版本维护](../deployment/release-compose.md)

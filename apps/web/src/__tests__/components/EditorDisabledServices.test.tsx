@@ -90,10 +90,12 @@ describe("移除 Web 上传和 AI 调用", () => {
             getData: () => "",
           },
         });
-      else
+      else {
+        vi.spyOn(view, "posAtCoords").mockReturnValue(2);
         Object.defineProperty(event, "dataTransfer", {
           value: { files: [image], getData: () => "" },
         });
+      }
       fireEvent(view.contentDOM, event);
       expect(event.defaultPrevented).toBe(true);
       expect(view.state.doc.toString()).toBe(source);
@@ -101,9 +103,7 @@ describe("移除 Web 上传和 AI 调用", () => {
       expect(view.state.selection.main.to).toBe(7);
       expect(useEditorStore.getState().markdown).toBe(source);
       expect(toast.error).toHaveBeenCalledWith(
-        expect.stringContaining(
-          kind === "drop" ? "拖入图片尚未开放" : "当前未启用文章存储",
-        ),
+        expect.stringContaining("当前未启用文章存储"),
       );
       expect(fetch).not.toHaveBeenCalled();
       expect(

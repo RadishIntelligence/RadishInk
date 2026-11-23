@@ -30,10 +30,10 @@ Corepack 按 `packageManager` 选择 pnpm 9.0.2；纯 Web 安装可同时设置 
 | -------- | --------------------------------------------------------------------------------------------------- |
 | 归属     | 现有 `dabailuobo` 项目空间                                                                          |
 | 项目     | 已有 `radish-ink`，用户明确要求只用这一个项目                                                       |
-| 首次部署 | 分支和完整提交 SHA；本地未提交文件不会随 Git 导入部署                                               |
+| 部署定位 | 核对 Git 分支、完整提交 SHA 和自定义域名指向                                                        |
 | 访问域名 | 用户已绑定 `ink.radishx.com`，项目同时分配 `radish-ink.vercel.app`                                  |
-| 自动部署 | Production Branch 为 `dev`；仓库新增 main 过滤与 dev 内容去重，待推送生效，见下节                   |
-| 匿名访问 | 确认哪些域名允许匿名访问，以支持公众号请求本站图片                                                  |
+| 自动部署 | 已核对 `dev` 触发 Production 部署，仓库配置的分支过滤与内容去重见下节                               |
+| 匿名访问 | 已核对 `ink.radishx.com` 的首页及内置图，可用于后续公众号验收                                       |
 | 环境变量 | `ENABLE_EXPERIMENTAL_COREPACK=1`；纯 Web 使用 `ELECTRON_SKIP_BINARY_DOWNLOAD=1`，覆盖实际使用的环境 |
 
 Vercel 的 Production 是平台环境名称，使用默认域名做验收不表示产品正式上线。连接 Git 后推送可能自动部署；分支范围可用 [`git.deploymentEnabled`](https://vercel.com/docs/project-configuration/git-configuration) 控制，配置应在首次连接前按确认范围落地。当前仓库配置禁用 `main` 自动部署，其他分支维持默认；`dev` 另外按上次成功部署的源码内容去重。

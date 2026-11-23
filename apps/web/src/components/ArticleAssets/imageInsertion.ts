@@ -17,10 +17,14 @@ export class ImageInsertion {
     private status: (busy: boolean) => void,
     private report: (message: string) => void,
   ) {}
-  begin(target: ArticleImageTarget) {
+  begin(target: ArticleImageTarget, dropPosition?: number) {
     if (this.pending) throw new Error("图片正在处理中，请等待或取消本次插入");
     const { from, to } = this.view.state.selection.main;
-    this.pending = { from, to, target };
+    this.pending = {
+      from: dropPosition ?? from,
+      to: dropPosition ?? to,
+      target,
+    };
     this.status(true);
   }
   cancel() {
@@ -56,7 +60,10 @@ export class ImageInsertion {
     pending.from = update.changes.mapPos(pending.from, 1);
     pending.to = update.changes.mapPos(pending.to, empty ? 1 : -1);
   }
-  async insert(files: File[]) {
+  async insert(
+    files: File[],
+    userEvent: "input.paste" | "input.drop" = "input.paste",
+  ) {
     const pending = this.pending;
     if (!pending) return;
     try {
@@ -87,7 +94,7 @@ export class ImageInsertion {
           to: pending.to,
           insert: assets.map((asset) => `![图片](${asset.path})`).join("\n"),
         },
-        annotations: Transaction.userEvent.of("input.paste"),
+        annotations: Transaction.userEvent.of(userEvent),
       });
     } catch (error) {
       this.report(
