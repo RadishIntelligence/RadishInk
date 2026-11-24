@@ -46,7 +46,7 @@ export const defaultMarkdown = `# 欢迎使用 RadishInk
 
 ==这是高亮文本==
 
-这是一个 [链接](https://github.com/laugh0608/RadishInk)
+这是一个 [链接](https://github.com/RadishIntelligence/RadishInk)
 
 ## 2. 特殊格式
 ### 上标和下标
@@ -121,7 +121,7 @@ $$
 $$
 
 ## 7. 脚注与链接建议
-这里演示脚注的使用：[RadishInk · 萝卜墨笺](https://github.com/laugh0608/RadishInk "RadishInk 是一款专为公众号设计的编辑器") 可以极大提升排版效率。
+这里演示脚注的使用：[RadishInk · 萝卜墨笺](https://github.com/RadishIntelligence/RadishInk "RadishInk 是一款专为公众号设计的编辑器") 可以极大提升排版效率。
 
 在 RadishInk 中，只需为链接添加“标题”（双引号里的文字），系统就会自动将其转换为文末脚注，这是最符合微信公众号习惯的排法。
 

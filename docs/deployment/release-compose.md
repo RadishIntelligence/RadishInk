@@ -1,6 +1,6 @@
 # 固定版本 Compose 与受控维护
 
-本文提供独立于[本地构建 Compose](compose.md)的拉取式配置和维护工具。部署已发布版本时，从对应 [GitHub Release](https://github.com/laugh0608/RadishInk/releases) 下载目标架构的 `release-lock-arm64.json` 或 `release-lock-amd64.json`。示例 tag / SHA 为占位值。当前可验收版本与部署进度见[当前状态](../status/current.md)，本地编排验证见[实施记录](../records/2026-11-03-release-compose.md)。
+本文提供独立于[本地构建 Compose](compose.md)的拉取式配置和维护工具。部署已发布版本时，从对应 [GitHub Release](https://github.com/RadishIntelligence/RadishInk/releases) 下载目标架构的 `release-lock-arm64.json` 或 `release-lock-amd64.json`。示例 tag / SHA 为占位值。当前可验收版本与部署进度见[当前状态](../status/current.md)，本地编排验证见[实施记录](../records/2026-11-03-release-compose.md)。
 
 ## 固定版本与配置
 

@@ -6,7 +6,7 @@
 
 中文标点：，。！？「萝卜墨笺」；英文与数字：RadishInk 0123456789。
 
-这是 **加粗**、_斜体_、~~删除线~~ 和 `inline code`。链接：[RadishInk 源码](https://github.com/laugh0608/RadishInk)。
+这是 **加粗**、_斜体_、~~删除线~~ 和 `inline code`。链接：[RadishInk 源码](https://github.com/RadishIntelligence/RadishInk)。
 
 > 引用内容应保留缩进、边框与可读的文字颜色。切换明暗显示后，不能出现文字与背景同色。
 

@@ -21,7 +21,7 @@ const COPY_LABEL: Record<CopyStatus, string> = {
   unavailable: "剪贴板不可用，请手动选中错误信息",
 };
 
-const ISSUE_URL = "https://github.com/laugh0608/RadishInk/issues/new";
+const ISSUE_URL = "https://github.com/RadishIntelligence/RadishInk/issues/new";
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {

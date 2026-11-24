@@ -5,7 +5,7 @@
 | 项目              | 值                                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------------------- |
 | 上游              | https://github.com/tenngoxars/WeMD                                                                            |
-| 本项目            | https://github.com/laugh0608/RadishInk                                                                        |
+| 本项目            | https://github.com/RadishIntelligence/RadishInk                                                               |
 | 导入提交          | `70835e141aa94c0296c78c0f6adf67f636475f38`                                                                    |
 | 上游 Web 版本标识 | `1.5.3`，不是 RadishInk 发布版本                                                                              |
 | 来源核对日期      | 2026-10-05                                                                                                    |

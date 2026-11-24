@@ -31,7 +31,7 @@ P3-3 服务器 Web 工作区已在本地实现并通过浏览器验证，提供�
 - [贡献指南](CONTRIBUTING.md) · [文档索引](docs/README.md) · [仓库治理](docs/governance/repository-governance.md)
 - [Vercel 部署配置](docs/deployment/vercel.md) · [GitHub Rulesets 模板](.github/rulesets/README.md)
 
-静态写作站点为 [ink.radishx.com](https://ink.radishx.com)。自托管可使用同一版本的 Web 与 Server 镜像，按架构从 Release 获取部署锁文件。正式版轨道为两个组件同时提供固定版本、`release-latest` 和 `latest` 标签。安装与回退使用对应版本的锁文件。[发布版本与附件](https://github.com/laugh0608/RadishInk/releases) · [固定版本部署](docs/deployment/release-compose.md) · [离线备份与恢复](docs/deployment/backup-restore.md)
+静态写作站点为 [ink.radishx.com](https://ink.radishx.com)。自托管可使用同一版本的 Web 与 Server 镜像，按架构从 Release 获取部署锁文件。正式版轨道为两个组件同时提供固定版本、`release-latest` 和 `latest` 标签。安装与回退使用对应版本的锁文件。[发布版本与附件](https://github.com/RadishIntelligence/RadishInk/releases) · [固定版本部署](docs/deployment/release-compose.md) · [离线备份与恢复](docs/deployment/backup-restore.md)
 
 浏览器模式的草稿保存在当前站点的浏览器本地；当前部署不提供账号或跨设备同步。当前 Web 代码不再提供图床上传与 AI，旧配置保留但不启用；应用代码不加载统计脚本。当前请求与旧配置行为见 [Web 品牌与外部服务](docs/development/web-brand-and-services.md)。当前构建的依赖分发声明已复核，后续发布仍须按实际产物复核；真实公众号整体验收仍未完成。
 

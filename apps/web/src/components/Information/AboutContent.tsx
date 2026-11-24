@@ -98,7 +98,7 @@ export function AboutContent() {
       <h2>联系与反馈</h2>
       <p>
         <a
-          href="https://github.com/laugh0608/RadishInk"
+          href="https://github.com/RadishIntelligence/RadishInk"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -106,7 +106,7 @@ export function AboutContent() {
         </a>{" "}
         ·{" "}
         <a
-          href="https://github.com/laugh0608/RadishInk/issues/new"
+          href="https://github.com/RadishIntelligence/RadishInk/issues/new"
           target="_blank"
           rel="noopener noreferrer"
         >
