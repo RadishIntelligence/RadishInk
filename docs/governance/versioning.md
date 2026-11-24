@@ -32,7 +32,14 @@ vYY.M.RELEASE.DDXX-(dev|test|release)
 
 ## Docker 镜像标识
 
-Web / server 镜像仓库分别为 `ghcr.io/laugh0608/radishink-web`、`ghcr.io/laugh0608/radishink-server`。两者使用同一源码 revision 与完整版本。完整版本标签必须与 Git tag 逐字相同，保留 `v`、可选扩展与轨道后缀。OCI 标签 `org.opencontainers.image.version` 使用同一完整 tag，另记录实际 source 与完整 revision。已发布版本见[当前状态](../status/current.md)。
+发布按工作流所在的 GitHub 仓库选择成对镜像和 OCI `org.opencontainers.image.source`。成对记录及部署 lock 的 `formatVersion` 固定该来源。
+
+| GitHub 仓库                    | 成对记录和 lock 格式 | Web / Server 镜像                                                                         |
+| ------------------------------ | -------------------- | ----------------------------------------------------------------------------------------- |
+| `laugh0608/RadishInk`          | `1`                  | `ghcr.io/laugh0608/radishink-web`、`ghcr.io/laugh0608/radishink-server`                   |
+| `RadishIntelligence/RadishInk` | `2`                  | `ghcr.io/radishintelligence/radishink-web`、`ghcr.io/radishintelligence/radishink-server` |
+
+两份镜像使用同一源码 revision 与完整版本。完整版本标签必须与 Git tag 逐字相同，保留 `v`、可选扩展与轨道后缀。OCI 标签 `org.opencontainers.image.version` 使用同一完整 tag，另记录实际 source 与完整 revision。已发布版本见[当前状态](../status/current.md)，接续顺序见[组织迁移](../planning/repository-transfer.md)。
 
 | Git tag 轨道 | 固定镜像标签         | 成功发布后更新的浮动别名   |
 | ------------ | -------------------- | -------------------------- |
@@ -40,7 +47,7 @@ Web / server 镜像仓库分别为 `ghcr.io/laugh0608/radishink-web`、`ghcr.io/
 | `test`       | 原样使用完整 Git tag | `test-latest`              |
 | `release`    | 原样使用完整 Git tag | `release-latest`、`latest` |
 
-例如正式镜像为 `ghcr.io/laugh0608/radishink-web:v26.10.1-release`。只有正式轨道可更新 `latest`，不从普通分支 push 生成 `main`、分支名或 `sha-*` 发布版本，也不把本地 `:local` 构建当成发布产物。SHA 可用作追溯元数据，不能替代完整版本标签。
+只有正式轨道可更新同一命名空间的 `latest`，不从普通分支 push 生成 `main`、分支名或 `sha-*` 发布版本，也不把本地 `:local` 构建当成发布产物。SHA 可用作追溯元数据，不能替代完整版本标签。个人命名空间的别名在切换后停留在该命名空间的最后一次发布。
 
 固定版本标签发布后不得指向其他内容；重试须确认现有产物一致。受控 Compose 同时固定完整 tag 与对应平台 manifest digest，浮动别名只用于发现版本，不用作可复现部署依据。
 
@@ -49,10 +56,10 @@ Web / server 镜像仓库分别为 `ghcr.io/laugh0608/radishink-web`、`ghcr.io/
 创建未来 tag 前，在目标提交上运行只读命名检查：
 
 ```bash
-mise exec -- pnpm check:release-tag --tag v26.10.1.0501-test
+mise exec -- pnpm check:release-tag --tag v26.10.1.0501-test --repository RadishIntelligence/RadishInk
 ```
 
-该命令只输出解析结果、镜像标签与 OCI 版本字段，不创建 tag、不访问网络、不构建或推送镜像。无 tag、旧格式或非法字段退出非零。它不遍历或否定历史 tag，也不宣称已经验证版本序号、日期与实际发布记录一致。
+该命令只输出解析结果、镜像标签与 OCI 版本字段，不创建 tag、不访问网络、不构建或推送镜像。无 tag、旧格式或非法字段退出非零。省略 `--repository` 时输出个人命名空间的元数据。它不遍历或否定历史 tag，也不宣称已经验证版本序号、日期与实际发布记录一致。
 
 实现为 [release-metadata.mjs](../../scripts/release-metadata.mjs)，测试通过 `pnpm test:governance` 接入现有 Repo Hygiene。`--component web|server` 选择组件，`--revision <完整 SHA>` 绑定来源；发布模板还提供 `--source-version version.json`，产品版本或轨道不符时不能输出发布元数据。[主仓库发布工作流](../../.github/workflows/publish.yml)复用同一脚本核对版本并生成 OCI 字段。`test`、`release` tag 触发双架构候选 CI 与成对镜像发布，细节见[发布流程](../deployment/release-materials.md#主仓库发布流程)。
 

@@ -17,7 +17,10 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   publish:
-    if: github.repository == 'laugh0608/RadishInk'
+    if: >-
+      github.repository_id == '1405083121' &&
+      (github.repository == 'laugh0608/RadishInk' ||
+      github.repository == 'RadishIntelligence/RadishInk')
     needs: quality
     runs-on: ubuntu-24.04
     timeout-minutes: 90
@@ -46,7 +49,9 @@ jobs:
         run: |
           revision=$(git rev-parse HEAD)
           test "$revision" = "$(git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}")"
-          node scripts/release-metadata.mjs --tag "$RELEASE_TAG" --revision "$revision" --source-version version.json --format github >> "$GITHUB_OUTPUT"
+          node scripts/release-metadata.mjs --tag "$RELEASE_TAG" --revision "$revision" \
+            --source-version version.json --repository "$GITHUB_REPOSITORY" \
+            --format github >> "$GITHUB_OUTPUT"
           echo "revision=$revision" >> "$GITHUB_OUTPUT"
           existing=$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --slurp |
             jq -c --arg tag "$RELEASE_TAG" 'first(.[][] | select(.tag_name == $tag)) // null')
@@ -81,7 +86,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           labels: ${{ steps.release.outputs.labels }}
-          outputs: type=image,name=ghcr.io/laugh0608/radishink-web,push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ steps.release.outputs.web_image }},push-by-digest=true,name-canonical=true,push=true
       - name: Build the Server candidate by digest
         id: server
         if: steps.release.outputs.exists == 'false'
@@ -91,7 +96,7 @@ jobs:
           file: apps/server/Dockerfile
           platforms: linux/amd64,linux/arm64
           labels: ${{ steps.release.outputs.labels }}
-          outputs: type=image,name=ghcr.io/laugh0608/radishink-server,push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ steps.release.outputs.server_image }},push-by-digest=true,name-canonical=true,push=true
 
       - name: Verify the pair and create GitHub Release
         if: steps.release.outputs.exists == 'false'
@@ -99,17 +104,20 @@ jobs:
           REVISION: ${{ steps.release.outputs.revision }}
           WEB_INDEX: ${{ steps.web.outputs.digest }}
           SERVER_INDEX: ${{ steps.server.outputs.digest }}
+          WEB_IMAGE: ${{ steps.release.outputs.web_image }}
+          SERVER_IMAGE: ${{ steps.release.outputs.server_image }}
         shell: bash
         run: |
           node --use-env-proxy scripts/distribution/release-pair.mjs --pull \
             --tag "$RELEASE_TAG" --revision "$REVISION" \
+            --repository "$GITHUB_REPOSITORY" \
             --web-index "$WEB_INDEX" --server-index "$SERVER_INDEX" \
             --output "$RELEASE_DIR"
           track_flags=(--latest=false)
           if [[ "$RELEASE_TAG" == *-test ]]; then track_flags+=(--prerelease); fi
           gh release create "$RELEASE_TAG" "$RELEASE_DIR"/*.json \
             --verify-tag --title "$RELEASE_TAG" "${track_flags[@]}" \
-            --notes "仓库源码由 GitHub 随 tag 提供。第三方来源和许可见[镜像分发说明]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$REVISION/docs/deployment/image-distribution.md)。双镜像摘要和部署锁文件见附件。发布结果见 [Actions]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)。"
+            --notes "镜像为 \`$WEB_IMAGE:$RELEASE_TAG\` 与 \`$SERVER_IMAGE:$RELEASE_TAG\`。仓库源码由 GitHub 随 tag 提供。第三方来源和许可见[镜像分发说明]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/$REVISION/docs/deployment/image-distribution.md)。双镜像摘要和部署锁文件见附件。发布结果见 [Actions]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)。"
 
       - name: Restore the release record on retry
         if: steps.release.outputs.exists == 'true'
@@ -121,8 +129,9 @@ jobs:
         run: |
           record="$RELEASE_DIR/release-pair.json"
           jq -e --arg tag "$RELEASE_TAG" '.tag == $tag' "$record" >/dev/null
-          checks=$(node --use-env-proxy scripts/distribution/release-pair.mjs --check-tags "$record")
-          images=$(jq -r '.[] | ["ghcr.io/laugh0608/radishink-" + .component, .digest, .state] | @tsv' <<< "$checks")
+          checks=$(node --use-env-proxy scripts/distribution/release-pair.mjs --check-tags "$record" \
+            --repository "$GITHUB_REPOSITORY")
+          images=$(jq -r '.[] | [.image, .digest, .state] | @tsv' <<< "$checks")
           while read -r image digest state; do
             if [[ "$state" == absent ]]; then
               docker buildx imagetools create --tag "$image:$RELEASE_TAG" "$image@$digest"

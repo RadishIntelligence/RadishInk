@@ -68,6 +68,7 @@ mise exec -- pnpm prepare:source-bundle --check "output/distribution/radishink-s
 ```sh
 mise exec -- pnpm prepare:release-pair \
   --tag "${RELEASE_TAG}" --revision <候选完整 Git SHA> --source-version version.json \
+  --repository RadishIntelligence/RadishInk \
   --web-index sha256:<Web-index> --server-index sha256:<server-index> \
   --output "output/distribution/release-${RELEASE_TAG}"
 ```
@@ -75,6 +76,8 @@ mise exec -- pnpm prepare:release-pair \
 执行前须已有完整 Git tag，且其目标提交、当前 HEAD 和 `--revision` 相同，提交内的版本 / 轨道与 tag 一致；工作区与暂存区必须干净，忽略的材料缓存可以保留。工具只读取 Git，不创建或移动 tag，也不会因 Registry 尚无同名镜像而接受另一提交的旧 Git tag。候选构建及材料复核应来自该干净检出；执行前将四个候选平台 digest 拉入本地缓存，或使用工作流采用的 `--pull` 按平台 digest 获取。工具通过 Registry V2 只读获取 index、平台 manifest 和 config，重新计算响应内容 digest、检查 descriptor 大小 / media type、架构、非 root 用户与 OCI version/source/revision；再以该平台 manifest 绑定的本地最终镜像重采基础清单，与仓库锁定的基础镜像计划比较。现代 Docker containerd 存储核对平台 Descriptor；经典存储核对 config ID 与精确 RepoDigest，均比较 RootFS diff IDs 和平台，不将 `inspect.Id` 一概当作 config digest。GHCR 私有候选可通过 `RADISHINK_GHCR_USER` / `RADISHINK_GHCR_TOKEN` 提供只读凭据，不写入记录、不使用 Docker 全局凭据文件，不把响应正文或凭据写进诊断。config blob 可按 Registry 规范跳转至 GHCR / 指定 GitHub blob 域，最多 5 次且不携带认证头；tag 查询拒绝重定向，不能把跳转解释成缺失。
 
 两个组件的四份平台清单、源码版本和完整 tag 全部通过后，才输出 `release-pair.json`、`release-lock-amd64.json` 与 `release-lock-arm64.json`。前者保存两个 index、四个平台 manifest / config digest 和 Git revision。后两者从同一记录派生，用于[固定版本部署预检](release-compose.md)。缺少组件或架构、不同 revision、基础清单漂移和版本 / 轨道错误均会失败。
+
+示例为组织仓库发布。生成时省略 `--repository` 仍使用个人仓库。成对记录和两个 lock 使用同一格式版本，按[固定映射](../governance/versioning.md#docker-镜像标识)绑定两个命名空间和 OCI 来源。完整标签检查默认从记录的格式选择镜像，传入 `--repository` 时还要求记录属于指定来源。
 
 记录表示材料身份已核验，不表示远端 tag 已发布、CI 已运行或生产部署成功。实际发布另保留上传结果、双 tag 核验、别名更新、验证记录与回退目标。构建后生成的 digest 记录保存在交付材料中，不为把它塞回候选提交而改写已绑定的 revision 或 tag。
 
@@ -90,7 +93,7 @@ mise exec -- pnpm prepare:release-pair --check-tags "output/distribution/release
 
 ## 主仓库发布流程
 
-[发布工作流](../../.github/workflows/publish.yml)参考 Radish 的 tag 触发和候选 CI。`test`、`release` 轨道共用一个串行发布队列。发布任务只在 RadishInk 主仓库运行，沿用 GitHub Actions 的仓库凭据。[Radish 发布工作流](https://github.com/laugh0608/Radish/blob/master/.github/workflows/docker-images.yml)
+[发布工作流](../../.github/workflows/publish.yml)参考 Radish 的 tag 触发和候选 CI。`test`、`release` 轨道共用一个串行发布队列。发布任务通过仓库 ID 和转移前后的两个正式地址限定写入范围，并以当前仓库名选择发布来源。重试时发现成对记录来源与当前仓库不符就停止。 [Radish 发布工作流](https://github.com/laugh0608/Radish/blob/master/.github/workflows/docker-images.yml)
 
 1. CI 通过后校验 tag 与 `version.json`，构建并按 digest 上传 Web、Server 两个双架构候选。
 2. 重采四份基础清单，生成成对记录和两个部署 lock，上传到同版本 GitHub Release。Release 链接到该版本的第三方来源和许可说明。测试版为 Pre-release，正式 Release 在镜像核验完成后才标记 Latest。

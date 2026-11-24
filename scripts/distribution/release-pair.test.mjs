@@ -38,7 +38,7 @@ import {
   MANIFEST_TYPES,
   registryClient,
 } from "./registry.mjs";
-import { SOURCE } from "../deployment/release-config.mjs";
+import { releaseDestination } from "../release-destinations.mjs";
 
 const tag = "v26.10.2-dev",
   revision = "a".repeat(40);
@@ -499,7 +499,7 @@ test("libyuv's exact distfile allowance rejects other bytes at the same URL", (t
   );
 });
 
-function registryFixture(t, { plan }) {
+function registryFixture(t, { plan }, destination = releaseDestination()) {
   const objects = new Map(),
     indices = {},
     configurations = new Map();
@@ -524,7 +524,7 @@ function registryFixture(t, { plan }) {
           Labels: {
             "org.opencontainers.image.version": tag,
             "org.opencontainers.image.revision": revision,
-            "org.opencontainers.image.source": SOURCE,
+            "org.opencontainers.image.source": destination.source,
           },
         },
       });
@@ -576,6 +576,7 @@ function registryFixture(t, { plan }) {
       ),
       plan,
       client,
+      destination,
       inventory: async (component, ref) => {
         const child = objects.get(ref.split("@")[1]);
         const config = objects.get(child.json.config.digest);
@@ -594,8 +595,15 @@ function registryFixture(t, { plan }) {
 test("paired record collects four configs and produces deployment locks from platform digests", async (t) => {
   const f = registryFixture(t, sourcesFixture(t));
   const record = await collectPair(f.options);
+  assert.equal(record.formatVersion, 1);
+  assert.throws(
+    () =>
+      pairRecord(record, releaseDestination("RadishIntelligence/RadishInk")),
+    /Invalid release pair identity/,
+  );
   assert.equal(record.images.web.digest, f.indices.web.digest);
   for (const [arch, lock] of Object.entries(deploymentLocks(record))) {
+    assert.equal(lock.formatVersion, 1);
     assert.equal(
       lock.images.server.digest,
       record.images.server.platforms[`linux/${arch}`].digest,
@@ -609,9 +617,14 @@ test("paired record collects four configs and produces deployment locks from pla
 });
 
 test("paired collection and tag checks run against a real read-only Registry V2 fixture", async (t) => {
-  const f = registryFixture(t, sourcesFixture(t));
+  const destination = releaseDestination("RadishIntelligence/RadishInk");
+  const f = registryFixture(t, sourcesFixture(t), destination);
   const server = http.createServer((req, res) => {
     assert.equal(req.method, "GET");
+    assert.match(
+      req.url,
+      /^\/v2\/radishintelligence\/radishink-(web|server)\//,
+    );
     const ref = req.url.split("/").at(-1),
       item = f.objects.get(ref);
     res.setHeader("Docker-Distribution-Api-Version", "registry/2.0");
@@ -631,9 +644,35 @@ test("paired collection and tag checks run against a real read-only Registry V2 
     allowLoopback: true,
   });
   const record = await collectPair({ ...f.options, client });
+  assert.equal(record.formatVersion, 2);
+  assert.equal(
+    record.images.web.repository,
+    "ghcr.io/radishintelligence/radishink-web",
+  );
+  assert.throws(
+    () => pairRecord(record, releaseDestination()),
+    /Invalid release pair identity/,
+  );
+  const mixed = structuredClone(record);
+  mixed.images.server.repository = "ghcr.io/laugh0608/radishink-server";
+  assert.throws(() => pairRecord(mixed), /Incomplete paired image/);
+  await assert.rejects(
+    immutableTagCheck(client, mixed),
+    /Unexpected release image repository/,
+  );
+  await assert.rejects(
+    client.manifest("another/radishink-web", tag),
+    /Unexpected registry repository/,
+  );
   assert.deepEqual(
-    (await immutableTagCheck(client, record)).map((item) => item.state),
-    ["absent", "absent"],
+    (await immutableTagCheck(client, record)).map(({ image, state }) => [
+      image,
+      state,
+    ]),
+    [
+      ["ghcr.io/radishintelligence/radishink-web", "absent"],
+      ["ghcr.io/radishintelligence/radishink-server", "absent"],
+    ],
   );
   const root = fs.mkdtempSync(
     path.join(os.tmpdir(), "radishink-release-output-"),
@@ -643,8 +682,10 @@ test("paired collection and tag checks run against a real read-only Registry V2 
   writeReleaseRecords(output, record);
   const read = (name) => JSON.parse(fs.readFileSync(path.join(output, name)));
   assert.deepEqual(read("release-pair.json"), record);
-  for (const [arch, lock] of Object.entries(deploymentLocks(record)))
+  for (const [arch, lock] of Object.entries(deploymentLocks(record))) {
+    assert.equal(lock.formatVersion, 2);
     assert.deepEqual(read(`release-lock-${arch}.json`), lock);
+  }
   assert.throws(() => writeReleaseRecords(output, record), /New --output/);
 });
 

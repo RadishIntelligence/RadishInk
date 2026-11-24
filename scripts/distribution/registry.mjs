@@ -1,6 +1,16 @@
 import { createHash } from "node:crypto";
 import https from "node:https";
 import http from "node:http";
+import {
+  RELEASE_DESTINATIONS,
+  releaseDestinationForFormat,
+} from "../release-destinations.mjs";
+
+const allowedImages = new Set(
+  Object.values(RELEASE_DESTINATIONS).flatMap(({ images }) =>
+    Object.values(images),
+  ),
+);
 
 export const INDEX_TYPES = [
   "application/vnd.oci.image.index.v1+json",
@@ -73,7 +83,7 @@ export function registryClient({
       );
     });
   async function get(repository, kind, reference, { absent = false } = {}) {
-    if (!/^laugh0608\/radishink-(web|server)$/.test(repository))
+    if (!allowedImages.has(`ghcr.io/${repository}`))
       throw new Error("Unexpected registry repository");
     if (kind === "blobs") validDigest(reference);
     else if (!/^(?:sha256:[a-f0-9]{64}|v[0-9A-Za-z.-]+)$/.test(reference))
@@ -193,13 +203,20 @@ export function registryClient({
   };
 }
 
-export async function immutableTagCheck(client, { tag, images }) {
+export async function immutableTagCheck(
+  client,
+  { formatVersion, tag, images },
+) {
+  const destination = releaseDestinationForFormat(formatVersion);
   const results = [];
   // Check both repositories, including on a resumed partial publication.
   for (const component of ["web", "server"]) {
     const expected = images[component];
     validDigest(expected.digest);
-    const repository = `laugh0608/radishink-${component}`;
+    const image = destination.images[component];
+    if (expected.repository !== image)
+      throw new Error(`Unexpected release image repository: ${component}`);
+    const repository = image.slice("ghcr.io/".length);
     const existing = await client.manifest(repository, tag, { absent: true });
     if (existing && existing.digest !== expected.digest)
       throw new Error(
@@ -207,6 +224,7 @@ export async function immutableTagCheck(client, { tag, images }) {
       );
     results.push({
       component,
+      image,
       tag,
       digest: expected.digest,
       state: existing ? "reuse" : "absent",

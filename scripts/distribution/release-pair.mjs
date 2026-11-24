@@ -5,10 +5,10 @@ import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 import { releaseMetadata } from "../release-metadata.mjs";
 import {
-  releaseLock,
-  REPOSITORIES,
-  SOURCE,
-} from "../deployment/release-config.mjs";
+  releaseDestination,
+  releaseDestinationForFormat,
+} from "../release-destinations.mjs";
+import { releaseLock } from "../deployment/release-config.mjs";
 import {
   INDEX_TYPES,
   MANIFEST_TYPES,
@@ -67,14 +67,22 @@ export function verifyGitSource(root, tag, revision) {
       "Release records require a clean source checkout (ignored material caches are allowed)",
     );
 }
-export function pairRecord(value) {
+export function pairRecord(
+  value,
+  destination = releaseDestinationForFormat(value.formatVersion),
+) {
   if (
-    value.formatVersion !== 1 ||
+    value.formatVersion !== destination.formatVersion ||
     !/^[a-f0-9]{40}$/.test(value.revision) ||
     /^0+$/.test(value.revision)
   )
     throw new Error("Invalid release pair identity");
-  const metadata = releaseMetadata(value.tag);
+  const metadata = releaseMetadata(
+    value.tag,
+    "web",
+    value.revision,
+    destination,
+  );
   if (
     metadata.productVersion !== value.productVersion ||
     metadata.track !== value.track
@@ -84,7 +92,7 @@ export function pairRecord(value) {
     const image = value.images?.[component];
     if (
       !image ||
-      image.repository !== REPOSITORIES[component] ||
+      image.repository !== destination.images[component] ||
       Object.keys(image.platforms ?? {})
         .sort()
         .join() !== platforms.join()
@@ -109,7 +117,7 @@ export function deploymentLocks(record) {
   return Object.fromEntries(
     platforms.map((platform) => {
       const value = {
-        formatVersion: 1,
+        formatVersion: record.formatVersion,
         tag: record.tag,
         revision: record.revision,
         platform,
@@ -153,8 +161,9 @@ export async function collectPair({
   plan,
   client,
   inventory = collectInventory,
+  destination = releaseDestination(),
 }) {
-  const metadata = releaseMetadata(tag, "web", revision);
+  const metadata = releaseMetadata(tag, "web", revision, destination);
   if (
     !revision ||
     /^0+$/.test(revision) ||
@@ -165,7 +174,8 @@ export async function collectPair({
   validatePlan(plan);
   const images = {};
   for (const component of ["web", "server"]) {
-    const repository = `laugh0608/radishink-${component}`;
+    const image = destination.images[component];
+    const repository = image.slice("ghcr.io/".length);
     const index = await client.manifest(
       repository,
       validDigest(digests[component]),
@@ -216,7 +226,7 @@ export async function collectPair({
       if (
         labels["org.opencontainers.image.version"] !== tag ||
         labels["org.opencontainers.image.revision"] !== revision ||
-        labels["org.opencontainers.image.source"] !== SOURCE
+        labels["org.opencontainers.image.source"] !== destination.source
       )
         throw new Error(`Mixed release OCI labels: ${component}/${platform}`);
       const user = config.json.config?.User;
@@ -228,11 +238,10 @@ export async function collectPair({
         ).includes(user)
       )
         throw new Error(`Unexpected image user: ${component}`);
-      const actual = await inventory(
-        component,
-        `${REPOSITORIES[component]}@${manifest.digest}`,
-        { manifest, config },
-      );
+      const actual = await inventory(component, `${image}@${manifest.digest}`, {
+        manifest,
+        config,
+      });
       const expected = plan.inventories.find(
         (item) => item.component === component && item.platform === platform,
       );
@@ -245,7 +254,7 @@ export async function collectPair({
     if (Object.keys(children).sort().join() !== platforms.join())
       throw new Error(`Missing architecture: ${component}`);
     images[component] = {
-      repository: REPOSITORIES[component],
+      repository: image,
       digest: index.digest,
       platforms: Object.fromEntries(
         platforms.map((platform) => [platform, children[platform]]),
@@ -253,7 +262,7 @@ export async function collectPair({
     };
   }
   return pairRecord({
-    formatVersion: 1,
+    formatVersion: destination.formatVersion,
     tag,
     revision,
     productVersion: metadata.productVersion,
@@ -272,6 +281,7 @@ if (
         tag: { type: "string" },
         revision: { type: "string" },
         "source-version": { type: "string", default: "version.json" },
+        repository: { type: "string" },
         "web-index": { type: "string" },
         "server-index": { type: "string" },
         output: { type: "string" },
@@ -279,6 +289,10 @@ if (
         pull: { type: "boolean" },
       },
     });
+    const destination =
+      values.repository === undefined
+        ? undefined
+        : releaseDestination(values.repository);
     const client = registryClient({
       username: process.env.RADISHINK_GHCR_USER,
       password: process.env.RADISHINK_GHCR_TOKEN,
@@ -287,6 +301,7 @@ if (
       if (values.pull) throw new Error("--pull is only for pair collection");
       const record = pairRecord(
         JSON.parse(fs.readFileSync(values["check-tags"])),
+        destination,
       );
       verifyGitSource(
         fileURLToPath(new URL("../../", import.meta.url)),
@@ -317,6 +332,7 @@ if (
         ),
         client,
         inventory: values.pull ? pullInventory : collectInventory,
+        destination,
       });
       // Never emit even the first file before both components and the tag guard pass.
       await immutableTagCheck(client, record);
