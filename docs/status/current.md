@@ -2,9 +2,9 @@
 
 2026-11-23 更新。公网版 `64373e7` 的独立合成稿已由作者从“复制到公众号”粘贴到真实桌面编辑器。截图可见站点 PNG、独立公式和两条分段列出的完整网址。作者确认手动保存成功，本轮草稿重开与手机长按复制待验。[11 月 23 日验收记录](../records/2026-11-23-mobile-wechat-acceptance.md#验收站复制到公众号的首次粘贴)
 
-首个正式版使用 `v26.11.2-release`。本版范围与剩余验收见[全日回顾](../records/2026-11-23-day-review.md)，远端交付以 [GitHub Release](https://github.com/laugh0608/RadishInk/releases/tag/v26.11.2-release) 的成对镜像记录和两个架构的部署锁为准。
+首个正式版使用 `v26.11.2-release`。本版范围与剩余验收见[全日回顾](../records/2026-11-23-day-review.md)，远端交付以 [GitHub Release](https://github.com/RadishIntelligence/RadishInk/releases/tag/v26.11.2-release) 的成对镜像记录和两个架构的部署锁为准。
 
-2026-11-24 开始准备迁入 `RadishIntelligence`。GitHub 仓库转移、Vercel 接续和组织 GHCR 首次测试发布尚待执行，顺序及核对项见[组织迁移](../planning/repository-transfer.md)。
+2026-11-24，公开仓库原名迁入 [RadishIntelligence/RadishInk](https://github.com/RadishIntelligence/RadishInk)，仓库 ID、Git 引用和首个正式版的三个附件已核对。三条 Ruleset 保持生效，恢复了主线与发布 tag 创建规则的管理员绕过，以及 Secret Scanning 和 Push Protection。Vercel 接续与组织 GHCR 首次测试发布按[迁移手册](../planning/repository-transfer.md)验收。
 
 `v26.11.1.1601-test` 指向 `46e3581`，GitHub Actions 在首次运行自动创建 Pre-release。两个架构的原生 CI 均通过，三个附件均可匿名下载且 SHA-256 一致，两个完整镜像标签与 `test-latest` 已回读核对。 [发布记录](../records/2026-11-16-p4-release-acceptance.md#候选自动发布) · [Pre-release](https://github.com/laugh0608/RadishInk/releases/tag/v26.11.1.1601-test)
 

@@ -2,7 +2,7 @@ RadishInk server distribution — source and license scope
 
 WeMD import: 70835e141aa94c0296c78c0f6adf67f636475f38
 RadishInk license transition baseline: d4534e2149dac967937bb308683e06403cc57761
-Source repository: https://github.com/laugh0608/RadishInk
+Source repository: https://github.com/RadishIntelligence/RadishInk
 
 The original WeMD server, including the retained upload and COS source, was
 imported under the MIT terms preserved in WeMD-LICENSE.txt. The historical

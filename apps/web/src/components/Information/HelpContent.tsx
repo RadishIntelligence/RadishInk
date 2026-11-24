@@ -102,7 +102,7 @@ export function HelpContent() {
       <p>
         遇到问题可先复制并保存草稿源文，再通过{" "}
         <a
-          href="https://github.com/laugh0608/RadishInk/issues/new"
+          href="https://github.com/RadishIntelligence/RadishInk/issues/new"
           target="_blank"
           rel="noopener noreferrer"
         >

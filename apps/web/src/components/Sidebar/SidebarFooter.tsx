@@ -56,7 +56,7 @@ export function SidebarFooter() {
       </div>
       <div className="footer-links">
         <a
-          href="https://github.com/laugh0608/RadishInk"
+          href="https://github.com/RadishIntelligence/RadishInk"
           target="_blank"
           rel="noopener noreferrer"
           data-tooltip="GitHub 仓库"

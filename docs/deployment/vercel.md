@@ -6,7 +6,7 @@
 
 | 设置              | 值                                           |
 | ----------------- | -------------------------------------------- |
-| Git 仓库          | `laugh0608/RadishInk`                        |
+| Git 仓库          | `RadishIntelligence/RadishInk`               |
 | Root Directory    | 仓库根目录                                   |
 | Production Branch | 现有项目使用 `dev`；将来切换 `main` 另行确定 |
 | Framework         | Vite                                         |
@@ -49,7 +49,7 @@ Vercel 的 Production 是平台环境名称，使用默认域名做验收不表�
 1. 打开已有 `radish-ink` 项目。Root Directory 保持仓库根目录，构建参数使用上表；设置 Node 22.x，并核对 `ENABLE_EXPERIMENTAL_COREPACK=1`、`ELECTRON_SKIP_BINARY_DOWNLOAD=1`，覆盖 Production 与 Preview。不要新建项目。
 2. 如果导入页提供分支选择，选择 `dev`。若只支持默认 `main`，首次导入可能先构建 `main`；创建项目后到 **Settings → Environments → Production → Branch Tracking** 改为 `dev` 并保存，不能把初始 main 构建当作最终验收版本。[官方分支设置](https://vercel.com/docs/git)。
 3. 使用下节的仓库部署规则：`main` 禁止自动部署，`dev` 对比上次成功部署的内容。`vercel.json` 的 `ignoreCommand` 覆盖面板的 Ignored Build Step，无需另填控制台命令，也不要改 Build Command。未来将 Production Branch 切换到 `main` 时必须同步调整分支过滤和脚本。
-4. 在 **Deployments → Create Deployment** 选择 `dev`（可填 `https://github.com/laugh0608/RadishInk/tree/dev`）创建部署；确认详情中的分支及提交对应本轮推送，日志实际使用 Node 22 / pnpm 9.0.2，最终状态为 Ready。
+4. 在 **Deployments → Create Deployment** 选择 `dev`（可填 `https://github.com/RadishIntelligence/RadishInk/tree/dev`）创建部署；确认详情中的分支及提交对应本轮推送，日志实际使用 Node 22 / pnpm 9.0.2，最终状态为 Ready。
 5. 核对 Deployment Protection 与 `ink.radishx.com` 的匿名访问；使用 **Standard Protection** 时选择 Production 域名，不使用需要登录的单次部署地址。无痕窗口检查首页、`/pwa/icon-192.png` 与 `/images/writing.svg` 均可访问；若仍需登录，先核对实际域名和保护范围，不把绕过凭据加入图片链接。保护设置的变更另行确认。
 6. 记录实际域名、项目归属／名称和部署提交；接着进行公网浏览器及真实公众号验收。每次后续推送 dev 都可能更新现有域名；本轮部署成功不等于公众号保存效果已验收。
 
