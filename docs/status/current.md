@@ -4,7 +4,7 @@
 
 首个正式版使用 `v26.11.2-release`。本版范围与剩余验收见[全日回顾](../records/2026-11-23-day-review.md)，远端交付以 [GitHub Release](https://github.com/RadishIntelligence/RadishInk/releases/tag/v26.11.2-release) 的成对镜像记录和两个架构的部署锁为准。
 
-2026-11-24，公开仓库原名迁入 [RadishIntelligence/RadishInk](https://github.com/RadishIntelligence/RadishInk)，仓库 ID、Git 引用和首个正式版的三个附件已核对。三条 Ruleset 保持生效，恢复了主线与发布 tag 创建规则的管理员绕过，以及 Secret Scanning 和 Push Protection。Vercel 接续与组织 GHCR 首次测试发布按[迁移手册](../planning/repository-transfer.md)验收。
+2026-11-24，公开仓库原名迁入 [RadishIntelligence/RadishInk](https://github.com/RadishIntelligence/RadishInk)。三条 Ruleset 已按迁前基线复核，Vercel 原项目已从组织 `dev` 自动部署，历史正式镜像通过双架构匿名拉取。首个组织测试版 [v26.11.3-test](https://github.com/RadishIntelligence/RadishInk/releases/tag/v26.11.3-test) 已完成双镜像发布及授权回读。两个新包初始为 Private，组织策略暂不允许公开。 [迁移验收记录](../records/2026-11-24-repository-transfer.md)
 
 `v26.11.1.1601-test` 指向 `46e3581`，GitHub Actions 在首次运行自动创建 Pre-release。两个架构的原生 CI 均通过，三个附件均可匿名下载且 SHA-256 一致，两个完整镜像标签与 `test-latest` 已回读核对。 [发布记录](../records/2026-11-16-p4-release-acceptance.md#候选自动发布) · [Pre-release](https://github.com/laugh0608/RadishInk/releases/tag/v26.11.1.1601-test)
 
