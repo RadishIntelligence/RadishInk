@@ -14,7 +14,10 @@ import {
   preflight,
   applyDeployment,
 } from "./release-deploy.mjs";
-import { SOURCE, REPOSITORIES, sha256 } from "./release-config.mjs";
+import { sha256 } from "./release-config.mjs";
+import { releaseDestination } from "../release-destinations.mjs";
+
+const destination = releaseDestination("RadishIntelligence/RadishInk");
 
 const { values } = parseArgs({
   options: { server: { type: "string" }, web: { type: "string" } },
@@ -87,7 +90,7 @@ function fixtureImage(component, base, tag, badHealth = false) {
     dockerfile,
     `FROM ${base}\n${badHealth ? "USER root\nRUN echo 'process.exit(1)' > /app/healthcheck.cjs\nUSER node\n" : ""}`,
   );
-  const name = `${REPOSITORIES[component]}:${tag}`;
+  const name = `${destination.images[component]}:${tag}`;
   raw([
     "buildx",
     "build",
@@ -101,7 +104,7 @@ function fixtureImage(component, base, tag, badHealth = false) {
     "--label",
     `org.opencontainers.image.revision=${revision}`,
     "--label",
-    `org.opencontainers.image.source=${SOURCE}`,
+    `org.opencontainers.image.source=${destination.source}`,
     "-t",
     name,
     "-f",
@@ -122,7 +125,7 @@ function fixtureImage(component, base, tag, badHealth = false) {
 }
 function buildLock(tag, badHealth = false) {
   return {
-    formatVersion: 1,
+    formatVersion: destination.formatVersion,
     tag,
     revision,
     platform: imagePlatform,
@@ -367,7 +370,7 @@ try {
   await assert.rejects(preflight(forged, docker), /mismatch/);
   assert.equal((await api("/capabilities")).status, 200);
   const unavailable = structuredClone(context);
-  unavailable.lock.references.server = `${REPOSITORIES.server}:${release.tag}@sha256:${"9".repeat(64)}`;
+  unavailable.lock.references.server = `${destination.images.server}:${release.tag}@sha256:${"9".repeat(64)}`;
   await assert.rejects(applyDeployment(unavailable, docker), /preflight/);
   assert.equal((await api("/capabilities")).status, 200);
   console.log(

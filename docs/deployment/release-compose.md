@@ -4,7 +4,9 @@
 
 ## 固定版本与配置
 
-[release lock 示例](../../deploy/release-lock.example.json)记录一份部署的完整 Git tag、40 位 source revision、`linux/arm64` 或 `linux/amd64` 及两份平台镜像 digest。工具派生 `ghcr.io/laugh0608/radishink-{web,server}:<完整 tag>@sha256:<平台 digest>`；不接受浮动别名、其他仓库、零值占位或单独一份镜像。两份镜像的 OCI 来源、revision、版本、实际平台和非 root 用户必须匹配，digest 必须对应单平台 image manifest，不能以多平台 index 冒充平台 digest。当前工具要求 Docker 的 image inspect 提供 Descriptor 信息，缺失时明确拒绝。
+[release lock 示例](../../deploy/release-lock.example.json)记录一份部署的完整 Git tag、40 位 source revision、`linux/arm64` 或 `linux/amd64` 及两份平台镜像 digest。格式 `1` 解析到 `ghcr.io/laugh0608`，格式 `2` 解析到 `ghcr.io/radishintelligence`，映射与 OCI 来源见[版本规则](../governance/versioning.md#docker-镜像标识)。
+
+工具由 lock 格式派生两个 `<镜像>:<完整 tag>@sha256:<平台 digest>` 引用。两份镜像的 OCI 来源、revision、版本、实际平台和非 root 用户必须匹配。digest 必须对应单平台 image manifest，Docker 的 image inspect 必须提供 Descriptor。历史 lock 原样使用。部署组织版前先更新维护工具至支持格式 `2` 的版本，回退时仍可用原格式 `1` lock。
 
 [公开配置](../../deploy/release.env.example)仅允许已知的 `RADISHINK_*` 键，重复键、未知键和多行值会失败。生产 Origin 必须为无路径、尾斜线和用户信息的精确 HTTPS；开发 HTTP 只接受 `127.0.0.1`。子路径和登录模式复用服务端约束。OIDC 开启时仍使用 `RADISHINK_SECRETS_DIR` 与既有 [OIDC overlay](../../deploy/compose.oidc.yml)，实际 secret 只由容器以 UID 1000 从只读秘密目录读取并核验权限，不写入公开配置、命令或部署记录。
 

@@ -13,9 +13,10 @@ import {
   releaseLock,
   publicConfiguration,
   verifyImage,
-  SOURCE,
 } from "./release-config.mjs";
 import { parseYaml } from "../check-repo.mjs";
+const personalSource = "https://github.com/laugh0608/RadishInk";
+const organizationSource = "https://github.com/RadishIntelligence/RadishInk";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const lock = () => ({
@@ -88,7 +89,10 @@ function engine(
               Labels: {
                 "org.opencontainers.image.version": context.lock.tag,
                 "org.opencontainers.image.revision": context.lock.revision,
-                "org.opencontainers.image.source": SOURCE,
+                "org.opencontainers.image.source":
+                  context.lock.formatVersion === 2
+                    ? organizationSource
+                    : personalSource,
               },
             },
           },
@@ -150,6 +154,12 @@ test("fixed references require a canonical full tag and a digest for both compon
     (x) => {
       x.images.web.repository = "unexpected";
     },
+    (x) => {
+      x.formatVersion = 3;
+    },
+    (x) => {
+      x.formatVersion = "2";
+    },
   ]) {
     const value = lock();
     change(value);
@@ -186,11 +196,34 @@ test("OCI provenance mismatches fail independently of a valid digest", () => {
       Labels: {
         "org.opencontainers.image.version": lock().tag,
         "org.opencontainers.image.revision": lock().revision,
-        "org.opencontainers.image.source": SOURCE,
+        "org.opencontainers.image.source": personalSource,
       },
     },
   };
   assert.doesNotThrow(() => verifyImage(valid, lock(), "server"));
+  const organizationLock = releaseLock({ ...lock(), formatVersion: 2 });
+  assert.match(
+    organizationLock.references.web,
+    /^ghcr\.io\/radishintelligence\/radishink-web:/,
+  );
+  assert.match(
+    organizationLock.references.server,
+    /^ghcr\.io\/radishintelligence\/radishink-server:/,
+  );
+  assert.throws(
+    () => verifyImage(valid, organizationLock, "server"),
+    /mismatch/,
+  );
+  const organizationImage = structuredClone(valid);
+  organizationImage.Config.Labels["org.opencontainers.image.source"] =
+    organizationSource;
+  assert.doesNotThrow(() =>
+    verifyImage(organizationImage, organizationLock, "server"),
+  );
+  assert.throws(
+    () => verifyImage(organizationImage, lock(), "server"),
+    /mismatch/,
+  );
   for (const field of [
     "org.opencontainers.image.version",
     "org.opencontainers.image.revision",
@@ -199,7 +232,7 @@ test("OCI provenance mismatches fail independently of a valid digest", () => {
     const labels = {
       "org.opencontainers.image.version": lock().tag,
       "org.opencontainers.image.revision": lock().revision,
-      "org.opencontainers.image.source": SOURCE,
+      "org.opencontainers.image.source": personalSource,
       [field]: "wrong",
     };
     assert.throws(
@@ -292,7 +325,7 @@ test("pull Compose retains local service hardening and uses an explicit external
 });
 
 test("preflight neither mutates volumes nor creates state or stops services", async (t) => {
-  const f = fixture(t);
+  const f = fixture(t, { release: { ...lock(), formatVersion: 2 } });
   const e = engine(f.context);
   await preflight(f.context, e.docker);
   assert.deepEqual(fs.readdirSync(f.context.stateDir), []);

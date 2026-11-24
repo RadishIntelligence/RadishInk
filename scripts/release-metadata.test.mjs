@@ -6,7 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { parseYaml } from "./check-repo.mjs";
-import { IMAGE_NAME, releaseMetadata } from "./release-metadata.mjs";
+import { releaseMetadata } from "./release-metadata.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const script = join(root, "scripts/release-metadata.mjs");
@@ -71,7 +71,9 @@ for (const [track, aliases] of [
     assert.deepEqual(metadata.aliases, aliases);
     assert.deepEqual(
       metadata.tags,
-      [tag, ...aliases].map((value) => `${IMAGE_NAME}:${value}`),
+      [tag, ...aliases].map(
+        (value) => `ghcr.io/laugh0608/radishink-web:${value}`,
+      ),
     );
     assert.equal(metadata.labels["org.opencontainers.image.version"], tag);
     assert.equal(metadata.image, "ghcr.io/laugh0608/radishink-web");
@@ -90,6 +92,8 @@ test("CLI returns metadata and fails without emitting publication output for inv
     ["--tag", "v1.4.7"],
     ["--tag", "v26.10.1-test", "--format", "invalid"],
     ["--tag", "v26.10.1-test", "unexpected"],
+    ["--tag", "v26.10.1-test", "--repository", ""],
+    ["--tag", "v26.10.1-test", "--repository", "another/RadishInk"],
   ]) {
     const result = spawnSync(process.execPath, [script, ...args], {
       encoding: "utf8",
@@ -98,6 +102,40 @@ test("CLI returns metadata and fails without emitting publication output for inv
     assert.notEqual(result.status, 0);
     assert.equal(result.stdout, "");
     assert.ok(result.stderr.trim());
+  }
+});
+
+test("GitHub output binds both candidate images and their OCI source to the repository", () => {
+  for (const owner of ["laugh0608", "RadishIntelligence"]) {
+    const runningRepository = `${owner}/RadishInk`;
+    const result = spawnSync(
+      process.execPath,
+      [
+        script,
+        "--tag",
+        "v26.12.1-test",
+        "--format",
+        "github",
+        "--repository",
+        runningRepository,
+      ],
+      { encoding: "utf8" },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    const lines = result.stdout.trim().split("\n");
+    assert.ok(
+      lines.includes(`web_image=ghcr.io/${owner.toLowerCase()}/radishink-web`),
+    );
+    assert.ok(
+      lines.includes(
+        `server_image=ghcr.io/${owner.toLowerCase()}/radishink-server`,
+      ),
+    );
+    assert.ok(
+      lines.includes(
+        `org.opencontainers.image.source=https://github.com/${runningRepository}`,
+      ),
+    );
   }
 });
 

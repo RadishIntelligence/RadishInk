@@ -21,6 +21,24 @@ test("current repository contract is coherent", () => {
 
 const mutations = [
   [
+    "publish workflow allows a replacement repository with the same name",
+    (x) => {
+      x.publication.jobs.publish.if = x.publication.jobs.publish.if.replace(
+        "github.repository_id == '1405083121' && ",
+        "",
+      );
+    },
+  ],
+  [
+    "publish retry is not bound to the current repository",
+    (x) => {
+      const step = x.publication.jobs.publish.steps.find((entry) =>
+        entry.run?.includes("--check-tags"),
+      );
+      step.run = step.run.replace('--repository "$GITHUB_REPOSITORY"', "");
+    },
+  ],
+  [
     "publish workflow downloads the complete source companion again",
     (x) => {
       x.publication.jobs.publish.steps.unshift({
@@ -60,6 +78,18 @@ const mutations = [
       x.publication.jobs.publish.steps.find(
         (step) => step.id === "web",
       ).with.tags = "radishink-web:v26.11.1-test";
+    },
+  ],
+  [
+    "candidate build pins the old image name after transfer",
+    (x) => {
+      const step = x.publication.jobs.publish.steps.find(
+        (entry) => entry.id === "server",
+      );
+      step.with.outputs = step.with.outputs.replace(
+        "${{ steps.release.outputs.server_image }}",
+        "ghcr.io/laugh0608/radishink-server",
+      );
     },
   ],
   [

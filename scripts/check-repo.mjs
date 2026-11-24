@@ -114,11 +114,22 @@ export function governanceErrors({
   expect(
     same(publication.jobs?.quality, { uses: "./.github/workflows/ci.yml" }) &&
       publish.needs === "quality" &&
-      publish.if === "github.repository == 'laugh0608/RadishInk'" &&
+      publish.if ===
+        "github.repository_id == '1405083121' && (github.repository == 'laugh0608/RadishInk' || github.repository == 'RadishIntelligence/RadishInk')" &&
       same(publish.permissions, { contents: "write", packages: "write" }),
     "只允许 RadishInk 发布任务在候选 CI 通过后写入 Release 与 GHCR",
   );
   const publishSteps = publish.steps ?? [];
+  const release = publishSteps.find((step) => step.id === "release");
+  const collectPair = publishSteps.find((step) =>
+    step.run?.includes("release-pair.mjs --pull"),
+  );
+  expect(
+    release?.run?.includes("node scripts/release-metadata.mjs") &&
+      release.run.includes('--repository "$GITHUB_REPOSITORY"') &&
+      collectPair?.run?.includes('--repository "$GITHUB_REPOSITORY"'),
+    "候选镜像名、OCI 来源与发布记录必须由当前 GitHub 仓库派生",
+  );
   expect(
     !publishSteps.some((step) =>
       /source-bundle\.mjs|radishink-sources-/.test(step.run ?? ""),
@@ -137,7 +148,7 @@ export function governanceErrors({
             step.with?.tags === undefined &&
             step.with?.push === undefined &&
             step.with?.outputs ===
-              `type=image,name=ghcr.io/laugh0608/radishink-${component},push-by-digest=true,name-canonical=true,push=true`,
+              `type=image,name=\${{ steps.release.outputs.${component}_image }},push-by-digest=true,name-canonical=true,push=true`,
         ),
       ),
     "两个候选镜像只按 digest 上传，完整标签由发布步骤写入",
@@ -147,11 +158,13 @@ export function governanceErrors({
   );
   expect(
     promote?.run.includes("release-pair.mjs --check-tags") &&
+      promote.run.includes('--repository "$GITHUB_REPOSITORY"') &&
+      promote.run.includes("[.image, .digest, .state] | @tsv") &&
       promote.if === undefined &&
       promote["continue-on-error"] === undefined &&
       promote.run.indexOf("release-pair.mjs --check-tags") <
         promote.run.indexOf("imagetools create"),
-    "写入完整镜像标签前必须检查两个标签冲突",
+    "写入完整镜像标签前必须检查当前仓库的成对记录及两个标签冲突，并使用回检的镜像名",
   );
   try {
     validatePlan(baseImagePlan);
@@ -618,6 +631,7 @@ function main() {
     "docs/development/validation.md",
     "docs/deployment/vercel.md",
     "scripts/check-repo.test.mjs",
+    "scripts/release-destinations.mjs",
     "scripts/release-metadata.mjs",
     "scripts/release-metadata.test.mjs",
     "scripts/generate-web-notices.mjs",
@@ -645,7 +659,11 @@ function main() {
     if (!existsSync(resolve(root, path))) errors.push(`缺少 ${path}`);
   if (errors.length) throw new Error(errors.join("\n"));
   errors.push(...governanceErrors(loadGovernance()));
-  if (!readFileSync(resolve(root, "AGENTS.md")).equals(readFileSync(resolve(root, "CLAUDE.md"))))
+  if (
+    !readFileSync(resolve(root, "AGENTS.md")).equals(
+      readFileSync(resolve(root, "CLAUDE.md")),
+    )
+  )
     errors.push("AGENTS.md 与 CLAUDE.md 必须逐字节一致");
   errors.push(
     ...licenseErrors({

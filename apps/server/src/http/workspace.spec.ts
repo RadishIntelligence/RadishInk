@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { request as httpRequest } from 'node:http';
 import { createRequire } from 'node:module';
+import { EventEmitter, once } from 'node:events';
 import type { AddressInfo } from 'node:net';
 import sharp from 'sharp';
 import { StorageDatabase } from '../storage/storage-database';
@@ -23,6 +24,9 @@ const { WorkspaceRuntime: Runtime } = requireBuilt(
 ) as {
   WorkspaceRuntime: typeof WorkspaceRuntime;
 };
+const requestBody = requireBuilt(
+  '../../dist/http/request-body',
+) as typeof import('./request-body');
 type Login = { cookie: string; csrf: string; userId: string };
 type Json = { [key: string]: unknown };
 const password = 'synthetic-password-2026';
@@ -73,6 +77,25 @@ function snapshot(
       );
   });
   return form;
+}
+
+function observeArticleReads(ids: string[]) {
+  const remaining = new Set(ids);
+  const entered = new EventEmitter();
+  // 真正的处理器先占用写入名额，再读取 multipart 正文。
+  const admitted = once(entered, 'admitted', {
+    signal: AbortSignal.timeout(3_000),
+  });
+  const readArticle = requestBody.readArticle;
+  const spy = jest
+    .spyOn(requestBody, 'readArticle')
+    .mockImplementation((req, id, signal) => {
+      const body = readArticle(req, id, signal);
+      if (remaining.delete(id) && remaining.size === 0)
+        entered.emit('admitted');
+      return body;
+    });
+  return { admitted, restore: () => spy.mockRestore() };
 }
 
 describe('P3-2 loopback HTTP / 实际 SQLite 与 worker', () => {
@@ -703,6 +726,7 @@ describe('P3-2 loopback HTTP / 实际 SQLite 与 worker', () => {
     const body = snapshot(id);
     const encoded = new Request(origin, { method: 'PUT', body });
     const bytes = Buffer.from(await encoded.arrayBuffer());
+    const admission = observeArticleReads([id]);
     let finish!: () => void;
     const response = new Promise<number>((resolve, reject) => {
       const req = httpRequest(
@@ -726,22 +750,25 @@ describe('P3-2 loopback HTTP / 实际 SQLite 与 worker', () => {
       req.write(bytes.subarray(0, bytes.length - 10));
       finish = () => req.end(bytes.subarray(bytes.length - 10));
     });
-    // 让真实 socket 的首批数据进入服务端，再在同一用户发起第二次提交。
-    await new Promise((resolve) => setTimeout(resolve, 30));
-    expect(
-      (
-        await call(
-          '/articles/' + randomUUID(),
-          { method: 'PUT', body: snapshot(randomUUID()) },
-          alice,
-        )
-      ).status,
-    ).toBe(429);
-    expect((await call('/health/live')).status).toBe(200);
-    expect((await call('/auth/logout', { method: 'POST' }, alice)).status).toBe(
-      204,
-    );
-    finish();
+    try {
+      await admission.admitted;
+      expect(
+        (
+          await call(
+            '/articles/' + randomUUID(),
+            { method: 'PUT', body: snapshot(randomUUID()) },
+            alice,
+          )
+        ).status,
+      ).toBe(429);
+      expect((await call('/health/live')).status).toBe(200);
+      expect(
+        (await call('/auth/logout', { method: 'POST' }, alice)).status,
+      ).toBe(204);
+    } finally {
+      admission.restore();
+      finish();
+    }
     expect(await response).toBe(401);
     const current = await signIn('alice');
     expect((await call('/articles/' + id, {}, current)).status).toBe(404);
@@ -831,13 +858,23 @@ describe('P3-2 loopback HTTP / 实际 SQLite 与 worker', () => {
     }
     const finishes: (() => void)[] = [];
     const responses: Promise<number>[] = [];
-    for (const user of users.slice(0, 4)) {
-      const id = randomUUID();
-      const encoded = new Request(origin, {
-        method: 'PUT',
-        body: snapshot(id),
-      });
-      const bytes = Buffer.from(await encoded.arrayBuffer());
+    const writes = await Promise.all(
+      users.slice(0, 4).map(async (user) => {
+        const id = randomUUID();
+        const encoded = new Request(origin, {
+          method: 'PUT',
+          body: snapshot(id),
+        });
+        return {
+          id,
+          user,
+          contentType: encoded.headers.get('content-type')!,
+          bytes: Buffer.from(await encoded.arrayBuffer()),
+        };
+      }),
+    );
+    const admission = observeArticleReads(writes.map(({ id }) => id));
+    for (const { user, id, contentType, bytes } of writes) {
       responses.push(
         new Promise<number>((resolve, reject) => {
           const req = httpRequest(
@@ -848,7 +885,7 @@ describe('P3-2 loopback HTTP / 实际 SQLite 与 worker', () => {
                 Origin: origin,
                 Cookie: user.cookie,
                 'X-CSRF-Token': user.csrf,
-                'Content-Type': encoded.headers.get('content-type')!,
+                'Content-Type': contentType,
                 'Content-Length': bytes.length,
               },
             },
@@ -864,7 +901,7 @@ describe('P3-2 loopback HTTP / 实际 SQLite 与 worker', () => {
       );
     }
     try {
-      await new Promise((resolve) => setTimeout(resolve, 30));
+      await admission.admitted;
       const fifth = randomUUID();
       expect(
         (
@@ -876,6 +913,7 @@ describe('P3-2 loopback HTTP / 实际 SQLite 与 worker', () => {
         ).status,
       ).toBe(429);
     } finally {
+      admission.restore();
       for (const finish of finishes) finish();
     }
     expect(await Promise.all(responses)).toEqual([201, 201, 201, 201]);

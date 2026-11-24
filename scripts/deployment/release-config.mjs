@@ -3,12 +3,8 @@ import path from "node:path";
 import { parseEnv } from "node:util";
 import { createHash } from "node:crypto";
 import { releaseMetadata } from "../release-metadata.mjs";
+import { releaseDestinationForFormat } from "../release-destinations.mjs";
 
-export const SOURCE = "https://github.com/laugh0608/RadishInk";
-export const REPOSITORIES = Object.freeze({
-  web: "ghcr.io/laugh0608/radishink-web",
-  server: "ghcr.io/laugh0608/radishink-server",
-});
 export const sha256 = (value) =>
   createHash("sha256").update(value).digest("hex");
 export function object(value, keys, label) {
@@ -29,13 +25,13 @@ export function releaseLock(value) {
     "release lock",
   );
   if (
-    value.formatVersion !== 1 ||
     !/^[a-f0-9]{40}$/.test(value.revision) ||
     /^0+$/.test(value.revision) ||
     !["linux/amd64", "linux/arm64"].includes(value.platform)
   )
     throw new Error("Invalid release identity or platform");
-  releaseMetadata(value.tag);
+  const destination = releaseDestinationForFormat(value.formatVersion);
+  releaseMetadata(value.tag, "web", value.revision, destination);
   object(value.images, ["web", "server"], "release images");
   const images = {};
   for (const component of ["web", "server"]) {
@@ -46,7 +42,7 @@ export function releaseLock(value) {
     )
       throw new Error(`Invalid ${component} platform digest`);
     images[component] =
-      `${REPOSITORIES[component]}:${value.tag}@${item.digest}`;
+      `${destination.images[component]}:${value.tag}@${item.digest}`;
   }
   return { ...value, references: images };
 }
@@ -190,11 +186,12 @@ export function directory(filename, privateMode = true) {
 
 export function verifyImage(metadata, lock, component) {
   const labels = metadata.Config?.Labels ?? {};
+  const { source } = releaseDestinationForFormat(lock.formatVersion);
   if (
     `${metadata.Os}/${metadata.Architecture}` !== lock.platform ||
     labels["org.opencontainers.image.version"] !== lock.tag ||
     labels["org.opencontainers.image.revision"] !== lock.revision ||
-    labels["org.opencontainers.image.source"] !== SOURCE ||
+    labels["org.opencontainers.image.source"] !== source ||
     metadata.Descriptor?.digest !== lock.images[component].digest ||
     ![
       "application/vnd.oci.image.manifest.v1+json",

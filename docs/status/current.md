@@ -4,6 +4,8 @@
 
 首个正式版使用 `v26.11.2-release`。本版范围与剩余验收见[全日回顾](../records/2026-11-23-day-review.md)，远端交付以 [GitHub Release](https://github.com/laugh0608/RadishInk/releases/tag/v26.11.2-release) 的成对镜像记录和两个架构的部署锁为准。
 
+2026-11-24 开始准备迁入 `RadishIntelligence`。GitHub 仓库转移、Vercel 接续和组织 GHCR 首次测试发布尚待执行，顺序及核对项见[组织迁移](../planning/repository-transfer.md)。
+
 `v26.11.1.1601-test` 指向 `46e3581`，GitHub Actions 在首次运行自动创建 Pre-release。两个架构的原生 CI 均通过，三个附件均可匿名下载且 SHA-256 一致，两个完整镜像标签与 `test-latest` 已回读核对。 [发布记录](../records/2026-11-16-p4-release-acceptance.md#候选自动发布) · [Pre-release](https://github.com/laugh0608/RadishInk/releases/tag/v26.11.1.1601-test)
 
 `v26.11.1.0902-test` 已通过本机隔离 arm64 Compose 验收。`v26.11.1.1601-test` 又通过本机 arm64 的生产配置 HTTPS 入口验收，覆盖安全会话、写作与 ZIP、私有 API 缓存及独立空卷恢复。 [部署验收记录](../records/2026-11-16-p4-release-acceptance.md#本机-https-配置验收)
