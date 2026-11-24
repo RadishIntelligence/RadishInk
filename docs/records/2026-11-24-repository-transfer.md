@@ -20,7 +20,9 @@
 
 `v26.11.3-test` 指向 `e64c738`。发布工作流完成双架构候选 CI、组织 GHCR 的 Web / Server 镜像构建和上传、四份平台镜像的授权拉取与分发清单复核，以及两个完整标签的摘要回读。三个公开 Pre-release 附件已下载，SHA-256 与 GitHub 发布元数据一致，两个部署锁为组织格式 `2`。 [Pre-release](https://github.com/RadishIntelligence/RadishInk/releases/tag/v26.11.3-test) · [发布工作流](https://github.com/RadishIntelligence/RadishInk/actions/runs/45390773455)
 
-两个包初次发布时为 Private。组织的 Package creation 中 Public 开关关闭，包设置因此禁用了 Public 选项。两份镜像的匿名 token 请求均返回 401。
+两个包初次发布时为 Private，组织 Package creation 策略关闭了 Public 选项。经所有者确认临时开启该选项，将 `radishink-web` 和 `radishink-server` 设为 Public 后立即恢复组织开关。刷新确认组织 Public 开关关闭，随后以空凭据 Docker 配置按各平台锁定摘要拉取两个组件的 amd64 和 arm64 镜像，格式 `2` 的 arm64 部署预检也通过。
+
+完整测试标签和 `test-latest` 的成对 index 摘要一致，四份平台 manifest 和 OCI config 均通过匿名回读。组织命名空间当前属于测试轨道，正式版仍从个人命名空间获取。 [Web 容器包](https://github.com/RadishIntelligence/RadishInk/pkgs/container/radishink-web) · [Server 容器包](https://github.com/RadishIntelligence/RadishInk/pkgs/container/radishink-server)
 
 ## 关联入口
 
