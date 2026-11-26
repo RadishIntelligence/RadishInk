@@ -1,1 +1,2 @@
+bash .radish-assets/check.sh --staged || exit $?
 pnpm exec lint-staged

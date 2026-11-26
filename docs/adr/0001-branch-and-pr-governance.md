@@ -51,3 +51,9 @@ Conventional Commits 放在提交范围检查器中，不用 Ruleset 正则阻�
 ## 后果
 
 普通开发保持轻量；稳定主线拥有可复核检查和合并记录。代价是维护者须承担本地验证、合并后回流，以及模板与远程实际设置的同步。发布门禁与分支保护分开管理，检查通过不等于已部署。
+
+## 二进制资产门禁
+
+本仓采用 [Radish 系列资产规则 v1](https://github.com/RadishIntelligence/.github/tree/main/asset-policy/v1)。单个二进制超过 5 MiB 时须登记例外，新增二进制合计超过 10 MiB 时提示复核。本仓的输出路径和例外以 [policy.tsv](../../.radish-assets/policy.tsv) 为准。
+
+Husky 初始化后使用项目现有钩子。PR 检查会核对新增提交中的资产。可用 `bash .radish-assets/check.sh --staged` 检查暂存区。

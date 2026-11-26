@@ -13,3 +13,8 @@
 *.zip binary
 *.pdf binary
 *.svg text eol=lf
+
+# Repository asset checks
+/.radish-assets/* text eol=lf
+/.husky/pre-commit text eol=lf
+/.husky/pre-push text eol=lf
